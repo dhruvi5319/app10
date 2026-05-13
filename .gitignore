@@ -1,0 +1,13 @@
+
+# >>> pivota:opencode-ignore
+# OpenCode sandbox artifacts — do not commit
+.opencode/
+opencode.json
+opencode.json.bak
+AGENTS.md
+.opencode.session
+# Dependencies and test artifacts — do not commit
+node_modules/
+test-results/
+playwright-report/
+# <<< pivota:opencode-ignore
