@@ -1,0 +1,14 @@
+.env
+uploads/
+chroma_db/
+rag_chatbot.db
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.venv/
+venv/
