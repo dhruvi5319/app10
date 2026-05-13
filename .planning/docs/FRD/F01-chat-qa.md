@@ -3,177 +3,166 @@
 
 ## F01: Chat Interface & Question Answering
 
-**Priority:** P0 — Critical MVP  
+**Priority:** P0 — Critical, MVP  
 **PRD Reference:** §6 F1
 
-**Description:** This feature provides the core interaction loop of the product: a chat UI where the user types natural language questions and receives answers grounded exclusively in their uploaded documents. The backend embeds the question, retrieves the top-k most relevant chunks from the vector store, constructs a strictly grounded LLM prompt, and streams or returns the generated answer. If no relevant context exists in the uploaded documents, the system explicitly refuses to answer rather than hallucinating.
+**Description:** The primary user interaction surface is a chat interface where users type natural-language questions and receive answers generated exclusively from content in their uploaded documents. On each query, the backend embeds the question, retrieves the top-k most similar chunks from the session's vector store, constructs a strictly-grounded prompt, calls the LLM, and returns the response along with source metadata for citation (see F02). If the answer cannot be found in the uploaded documents, the system explicitly says so rather than hallucinating.
 
 ---
 
 ### Terminology
 
-- **User Turn:** A single user message in the chat thread.
-- **Assistant Turn:** A single system-generated response in the chat thread.
-- **Query Embedding:** The float vector produced by passing the user's question through the embedding model — used to search the vector store.
-- **Retrieved Chunks:** The top-k chunks returned by the vector store's cosine similarity search against the query embedding.
-- **Context Window:** The assembled block of retrieved chunk texts passed to the LLM as context.
-- **Grounding Prompt:** The system prompt template that instructs the LLM to answer only from the provided context and to refuse if the answer is not present.
-- **Refusal Response:** A canned system message returned when the LLM determines the answer cannot be found in the provided chunks (e.g., "I could not find an answer to your question in the uploaded documents.").
-- **Streaming:** Optional token-by-token delivery of the LLM response to the frontend via SSE, reducing perceived latency.
-- **Message ID:** A UUID assigned to each chat turn (both user and assistant) for citation and history tracking.
+- **Query:** A natural-language question submitted by the user in the chat input field.
+- **Query Embedding:** The vector representation of the user's question, used to perform cosine-similarity search against chunk embeddings.
+- **Retrieval:** The process of finding the top-k chunks most semantically similar to the query embedding.
+- **Context Window:** The set of retrieved chunk texts assembled into a prompt sent to the LLM.
+- **Grounding Prompt:** A system prompt instructing the LLM to answer only from the provided context and to refuse if the answer is absent.
+- **Refusal Response:** A structured response the LLM returns when the answer cannot be found in the uploaded documents. Must never substitute external knowledge.
+- **Streaming:** Token-by-token LLM response delivery to the frontend via Server-Sent Events (SSE), enabling the typing-indicator effect.
+- **Message:** A single user query or assistant response in the conversation thread, stored in the session's chat history.
 
 ---
 
 ### Sub-features
 
-- **F01.1 — Chat Message Input Bar:** A text area and send button at the bottom of the chat panel.
-- **F01.2 — Message Thread Display:** A scrollable list of user and assistant messages with visual distinction (right vs. left aligned bubbles).
-- **F01.3 — Markdown Rendering:** Render assistant message content as Markdown (bold, italic, code blocks, ordered/unordered lists, headings).
-- **F01.4 — Query Embedding:** Embed the user's question using the configured embedding model.
-- **F01.5 — Vector Store Retrieval:** Cosine similarity search for top-k chunks matching the question embedding.
-- **F01.6 — Grounded LLM Prompt Construction:** Assemble system prompt + retrieved context + chat history (last N turns) + user question.
-- **F01.7 — LLM Answer Generation:** Call the configured LLM API and receive a grounded answer with citation metadata.
-- **F01.8 — Typing / Loading Indicator:** Show an animated typing indicator in the assistant bubble while the LLM generates.
-- **F01.9 — Refusal Handling:** Surface explicit "not found in documents" message when LLM cannot answer from context.
-- **F01.10 — Empty Query Guard:** Disable the send button and prevent submission when the input is blank or whitespace-only.
+- **F01-A:** Chat message thread UI (scrollable, user right / assistant left)
+- **F01-B:** Message input bar with send button and Enter key shortcut
+- **F01-C:** Typing / loading indicator during LLM generation
+- **F01-D:** Markdown rendering of assistant responses
+- **F01-E:** Query embedding and vector store retrieval
+- **F01-F:** Grounded LLM prompt construction and answer generation
+- **F01-G:** Refusal response when answer is absent from documents
+- **F01-H:** Response streaming to frontend (SSE)
 
 ---
 
 ### Process
 
-1. User types a question into the chat input bar.
-2. **Client-side guard (F01.10):** If input is empty or whitespace-only, the send button remains disabled. No request is sent.
-3. User presses Enter or clicks the send button.
-4. Frontend immediately appends the user message to the thread (optimistic UI) with a timestamp and a generated `message_id`.
-5. Frontend disables the input bar and displays the typing indicator in the assistant message slot.
-6. Frontend sends `POST /api/chat/query` with `{ session_id, question, message_id }`.
-7. **Backend validation:**
-   - Verify `session_id` is valid UUID and exists in the session store.
-   - Verify `question` is non-empty string after strip, ≤ 2000 characters.
-   - Verify at least 1 document is indexed in this session. If none, return `NO_DOCUMENTS_INDEXED` error.
-8. **Query embedding (F01.4):** Call embedding model with `question` text. Receive float vector.
-9. **Retrieval (F01.5):** Query vector store for this session's collection, retrieve top-k chunks (default k=5) by cosine similarity. Include metadata: `document_id`, `filename`, `chunk_index`, `page_number`, `text`.
-10. **Prompt construction (F01.6):**
-    - System prompt: "You are a document Q&A assistant. Answer the user's question using ONLY the context provided below. If the answer cannot be found in the context, respond with exactly: 'I could not find an answer to your question in the uploaded documents.' Do not use any knowledge outside the provided context."
-    - Context block: concatenated retrieved chunk texts, each labeled with `[Source: {filename}, chunk {chunk_index}]`.
-    - History: last `CHAT_HISTORY_WINDOW` turns (default 6 — 3 user + 3 assistant) from the session's chat history.
-    - User question appended last.
-11. **LLM call (F01.7):** Send assembled prompt to the configured LLM with `temperature=TEMPERATURE` (default 0.2), `max_tokens=1500`. Include citation extraction instruction in system prompt.
-12. **Response handling:**
-    - If LLM returns a response containing the refusal phrase → mark response type `refusal`.
-    - Otherwise → mark response type `answer`.
-    - Extract citation references from the response (see F02 for citation structure).
-13. Store both user turn and assistant turn in session chat history.
-14. Return `{ message_id, answer_text, citations, response_type, retrieved_chunks }` to frontend.
-15. Frontend removes typing indicator, appends assistant message to thread, auto-scrolls to bottom.
-16. Frontend re-enables input bar and sets focus.
+1. **User** types a question in the chat input bar and presses Enter or clicks the Send button.
+2. **Frontend** validates the query is non-empty (trims whitespace) and that at least one document is in `READY` status. If no documents are ready, displays a contextual prompt (see F05 §Validation).
+3. **Frontend** disables the send button and displays a typing indicator (animated ellipsis or spinner).
+4. **Frontend** appends the user message to the chat thread (right-aligned) and sends `POST /api/chat/query` with `{session_id, query, chat_history_ref}`.
+5. **Backend** validates `session_id` exists and `query` is non-empty (1–2000 characters).
+6. **Backend** generates an embedding of the query using the same embedding model used during ingestion.
+7. **Backend** queries the vector store collection `session_{session_id}` for the top-k most similar chunks (default `k=5`, configurable — see F07).
+8. **Backend** assembles a context block from the retrieved chunks, formatted as:
+   ```
+   [Source: {filename}, Page {page_number}, Chunk {chunk_index}]
+   {chunk_text}
+   ```
+9. **Backend** constructs a prompt using the grounding template:
+   - **System:** "You are a document assistant. Answer the user's question using ONLY the provided document excerpts. If the answer is not present in the excerpts, respond with: 'I could not find an answer to your question in the uploaded documents.' Do NOT use any external knowledge."
+   - **User:** The assembled context block, followed by the user's question.
+   - **Chat history:** Last N exchanges appended for conversational context (N configurable; default 10 turns).
+10. **Backend** calls the LLM API with streaming enabled. Streams token chunks back to the frontend via SSE (`GET /api/chat/stream/{message_id}`).
+11. **Frontend** renders each streaming token in the assistant bubble as it arrives; auto-scrolls the thread to the bottom.
+12. **Backend** aggregates the full response, records the message (query + answer + retrieved chunk IDs) in the session's chat history.
+13. **Backend** sends a final SSE event containing the full message object including citation data (see F02).
+14. **Frontend** re-enables the send button; renders the final answer with citations below the message bubble (see F02 §Process).
 
 ---
 
 ### Inputs
 
-- `question` (string, required): The user's natural language question. Max 2000 characters after trim.
-- `session_id` (string/UUID, required): In `X-Session-ID` header. Identifies session context.
-- `message_id` (string/UUID, optional): Client-generated ID for the user turn. Server generates one if not provided.
-- `TOP_K` (integer, from config): Number of chunks to retrieve. Default: 5. Range: 1–20.
-- `TEMPERATURE` (float, from config): LLM sampling temperature. Default: 0.2. Range: 0.0–1.0.
-- `CHAT_HISTORY_WINDOW` (integer, from config): Number of prior turns to include in prompt. Default: 6. Range: 0–20.
-- `LLM_MODEL` (string, from config): LLM model identifier. Default: `gpt-4o`.
-- `MAX_TOKENS` (integer, from config): Max tokens in LLM response. Default: 1500. Range: 100–4000.
+| Field | Type | Required | Constraints |
+|-------|------|----------|-------------|
+| `session_id` | string (UUID) | Yes | Active session with ≥ 1 `READY` document |
+| `query` | string | Yes | 1–2000 characters; non-empty after trimming |
+| `include_history` | boolean | No | Default `true`; sends last N chat turns as context |
 
 ---
 
 ### Outputs
 
-**On success (HTTP 200):**
+**Success (200 OK) — final message object:**
 ```json
 {
-  "message_id": "uuid-string",
-  "answer_text": "According to the contract, payment is due within 30 days of invoice receipt.",
-  "response_type": "answer",
-  "citations": [
+  "message_id": "uuid-v4",
+  "session_id": "uuid-v4",
+  "role": "assistant",
+  "content": "The contract was signed on March 15, 2024.",
+  "is_refusal": false,
+  "retrieved_chunks": [
     {
-      "citation_id": "uuid",
-      "document_id": "uuid",
+      "chunk_id": "doc-uuid:0",
+      "doc_id": "doc-uuid",
       "filename": "contract.pdf",
-      "chunk_index": 7,
       "page_number": 3,
-      "excerpt": "Payment shall be made within thirty (30) days of the date of invoice receipt."
+      "chunk_index": 0,
+      "excerpt": "...The parties agreed to sign on March 15, 2024..."
     }
   ],
-  "retrieved_chunks": 5,
-  "timestamp": "2026-05-13T10:31:00Z"
+  "created_at": "2026-05-13T10:01:00Z"
 }
 ```
 
-**On refusal (HTTP 200, response_type = "refusal"):**
+**Refusal response (answer not in documents):**
 ```json
 {
-  "message_id": "uuid-string",
-  "answer_text": "I could not find an answer to your question in the uploaded documents.",
-  "response_type": "refusal",
-  "citations": [],
-  "retrieved_chunks": 5,
-  "timestamp": "2026-05-13T10:31:05Z"
+  "message_id": "uuid-v4",
+  "role": "assistant",
+  "content": "I could not find an answer to your question in the uploaded documents.",
+  "is_refusal": true,
+  "retrieved_chunks": [],
+  "created_at": "2026-05-13T10:01:00Z"
 }
+```
+
+**SSE stream event (during generation):**
+```
+data: {"type": "token", "delta": "The contract"}
+data: {"type": "token", "delta": " was signed"}
+data: {"type": "done", "message": { ...full message object... }}
 ```
 
 ---
 
 ### Validation Rules
 
-- `question` must not be empty or whitespace-only after `.strip()`.
-- `question` must be ≤ 2000 characters.
-- `session_id` must be a valid UUID v4 format and exist in the in-memory session store.
-- At least 1 document must be indexed for the session before a query can be submitted. Return `NO_DOCUMENTS_INDEXED` otherwise.
-- `TOP_K` must be between 1 and 20 (inclusive). Values outside this range are clamped to the nearest bound.
-- `TEMPERATURE` must be between 0.0 and 1.0 (inclusive). Values outside are clamped.
-- `MAX_TOKENS` must be between 100 and 4000 (inclusive). Values outside are clamped.
-- The assembled context window (system prompt + context + history + question) must not exceed the LLM's context limit. If it does, truncate chat history turns (oldest first) until it fits. If still too large after removing all history, truncate retrieved chunks (lowest-similarity first).
-- LLM response must not be empty. If empty, return `LLM_EMPTY_RESPONSE` error.
+- `query` must be 1–2000 characters after whitespace trimming; reject empty or whitespace-only queries.
+- `session_id` must correspond to an active session.
+- At least one document with status `READY` must exist in the session before submitting a query. Surface a specific message if this condition is not met (see F05).
+- Query embedding must succeed before retrieval; if the embedding API is unavailable, return `503` immediately.
+- Retrieved chunks must belong to the same `session_id` (enforced via collection namespacing).
+- LLM response must not be empty; if empty string is returned, treat as `LLM_EMPTY_RESPONSE` error.
+- Chat history included in the prompt must not exceed the LLM's context window limit; truncate oldest turns first if needed.
 
 ---
 
 ### Error States
 
-| Scenario | HTTP Status | Error Code | User Message |
-|----------|-------------|------------|-------------|
-| Empty or whitespace question | 400 | `EMPTY_QUESTION` | "Please enter a question before sending." |
-| Question exceeds 2000 characters | 400 | `QUESTION_TOO_LONG` | "Your question is too long. Please shorten it to 2000 characters or fewer." |
-| No documents indexed in session | 400 | `NO_DOCUMENTS_INDEXED` | "No documents are uploaded yet. Please upload a document before asking questions." |
-| Invalid or missing session ID | 400 | `INVALID_SESSION` | "Session not found. Refresh the page to start a new session." |
-| Query embedding API failure | 503 | `EMBEDDING_UNAVAILABLE` | "Unable to process your question right now. Please try again." |
-| Vector store query failure | 500 | `RETRIEVAL_FAILED` | "Failed to search documents. Please try again." |
-| LLM API unavailable | 503 | `LLM_UNAVAILABLE` | "The AI service is temporarily unavailable. Please try again in a moment." |
-| LLM API key invalid / quota exceeded | 401 | `LLM_AUTH_FAILED` | "AI service authentication failed. Please check the API key configuration." |
-| LLM returns empty response | 500 | `LLM_EMPTY_RESPONSE` | "The AI returned an empty response. Please try rephrasing your question." |
-| LLM timeout (>30 seconds) | 504 | `LLM_TIMEOUT` | "The AI took too long to respond. Please try again." |
-| Context window overflow (unresolvable) | 500 | `CONTEXT_TOO_LARGE` | "Your question context is too large to process. Try a shorter question." |
+| Scenario | HTTP Status | Error Code | Message |
+|----------|-------------|------------|---------|
+| Empty query submitted | 422 | `EMPTY_QUERY` | "Please enter a question before sending." |
+| Query exceeds 2000 characters | 422 | `QUERY_TOO_LONG` | "Question must be 2000 characters or fewer." |
+| No ready documents in session | 422 | `NO_DOCUMENTS_READY` | "Please upload and process at least one document before asking a question." |
+| Session not found | 404 | `SESSION_NOT_FOUND` | "Session not found. Please refresh the page." |
+| Embedding API failure | 503 | `EMBEDDING_UNAVAILABLE` | "Could not process your question. Please try again." |
+| LLM API rate limit | 429 | `LLM_RATE_LIMIT` | "The AI service is busy. Please wait a moment and try again." |
+| LLM API unavailable | 503 | `LLM_UNAVAILABLE` | "The AI service is currently unavailable. Please check your configuration." |
+| LLM returns empty response | 500 | `LLM_EMPTY_RESPONSE` | "The AI did not return a response. Please try again." |
+| Vector store retrieval failure | 500 | `RETRIEVAL_FAILURE` | "Could not search your documents. Please try again." |
+| Context window exceeded | 500 | `CONTEXT_TOO_LARGE` | "The conversation history is too long. Please clear the chat and try again." |
 
 ---
 
 ### API Surface (this feature)
 
-See `Y1-api.md` §Chat for full request/response schemas.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/chat/query` | Submit a query; returns message_id immediately |
+| `GET` | `/api/chat/stream/{message_id}` | SSE stream of LLM tokens |
+| `GET` | `/api/chat/history/{session_id}` | Retrieve full chat history for session |
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/chat/query` | Submit a question; receive answer + citations |
-| `GET` | `/api/chat/history` | Retrieve full chat history for the session |
+Full request/response schemas → `Y1-api.md §Chat`
 
 ---
 
 ### Schema Surface (this feature)
 
-Uses: `sessions`, `chat_messages` — see `Y0-schema.md` §Sessions and §Chat.
+Uses tables/collections:
+- `messages` — stores each user and assistant message, linked to session
+- `retrieved_chunks` — join table linking message to chunk IDs used for generation
+- ChromaDB collection `session_{session_id}` — queried during retrieval
 
-Key fields per chat message stored server-side:
-- `message_id` (UUID)
-- `session_id` (UUID)
-- `role` (`user` | `assistant`)
-- `content` (string)
-- `response_type` (`answer` | `refusal` | null for user turns)
-- `citations` (JSON array)
-- `timestamp` (ISO 8601)
-
----
+Full DDL → `Y0-schema.md §Chat`

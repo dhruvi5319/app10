@@ -4,69 +4,84 @@
 **Version:** 1.0  
 **Date:** 2026-05-13  
 **Status:** Active  
-**Project Acronym:** RAG  
-**Based on PRD:** PRD.md v1.0
+**Based on PRD:** v1.0 (2026-05-13)
 
 ---
 
 ## Scope
 
-This document defines the detailed functional requirements for the RAG Chatbot application. It specifies the exact behavior, inputs, outputs, validation rules, and error handling for every feature identified in the PRD. Developers should be able to implement any feature end-to-end using only this document and the referenced cross-feature specifications (schema, API, error catalog, integrations). Where a section says *"see Y1-api.md"* or *"see Y0-schema.md"*, consult those chunk files for the full specification.
+This document provides detailed functional specifications for every feature in the RAG Chatbot v1. It translates PRD feature descriptions into precise, implementable requirements covering inputs, outputs, validation rules, process flows, error handling, database schema, and REST API contracts. Developers should be able to implement any feature from this document without ambiguity or requiring additional clarification.
 
-This FRD covers **v1 scope only**. All items marked Out of Scope in the PRD are explicitly excluded.
+The RAG Chatbot enables users to upload documents (PDF, TXT, DOCX), ask natural-language questions, and receive answers generated exclusively from the content of those documents, with inline source citations for verification.
 
 ---
 
 ## How to Read This Document
 
-- **Feature IDs** follow PRD numbering: `F00`–`F07`. Zero-padded to ensure correct sort order.
-- **Cross-feature chunks** are prefixed `Y`: `Y0-schema`, `Y1-api`, `Y2-errors`, `Y3-integrations`.
-- **Process steps** are numbered (1. 2. 3.) and represent the sequential execution path, including both happy-path and branch steps.
-- **Validation rules** are enforced before business logic executes. Any rule violation returns the associated error state immediately.
-- **Error States** tables use columns: `Scenario | HTTP Status | Error Code | User Message`.
-- **HTTP Status** codes are used by the backend REST API. Frontend handles them and maps to user-visible messages per `Y2-errors.md`.
-- **IDs in error codes** use SCREAMING_SNAKE_CASE (e.g., `FILE_TOO_LARGE`).
-
----
-
-## Shared Terminology
-
-| Term | Definition |
-|------|-----------|
-| **Session** | A single browser visit identified by a server-side session ID. Ends on page refresh. All state (chat history, uploaded docs) is scoped to the session. |
-| **Document** | A user-uploaded file (PDF, TXT, or DOCX) that has been successfully parsed, chunked, embedded, and indexed into the vector store. |
-| **Chunk** | A fixed-size, overlapping text segment produced by splitting a document. The atomic unit of retrieval. |
-| **Embedding** | A high-dimensional float vector representation of a chunk, produced by the embedding model. Stored in the vector store alongside the chunk text and metadata. |
-| **Vector Store** | The local database (ChromaDB or FAISS) holding all embeddings and their associated chunk metadata. |
-| **Retrieval** | The process of querying the vector store with a question embedding to find the top-k most semantically similar chunks. |
-| **LLM** | The Large Language Model (OpenAI GPT-4o or Anthropic Claude) used for answer generation. |
-| **Context Window** | The assembled text passed to the LLM, composed of the retrieved chunks plus the user's question. |
-| **Grounding** | The strict constraint that LLM answers must be derived only from retrieved chunks, not from the model's parametric knowledge. |
-| **Citation** | A reference attached to an LLM answer identifying the source document, chunk index, page (if available), and verbatim excerpt. |
-| **Top-K** | The number of chunks retrieved from the vector store per query. Configurable; default 5. |
-| **Chunk Size** | Maximum token length of a single chunk. Configurable; default 500 tokens. |
-| **Chunk Overlap** | Number of tokens shared between adjacent chunks to preserve sentence context. Configurable; default 50 tokens. |
-| **Session ID** | A UUID generated server-side at session initialization and stored in a browser cookie or returned in the response header. |
-| **Temperature** | LLM sampling parameter (0.0–1.0) controlling answer randomness. Lower = more deterministic. Default 0.2. |
-| **MIME Type** | HTTP content type identifying the file format (e.g., `application/pdf`, `text/plain`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`). |
+- **Feature IDs** follow the PRD (`F0`–`F7`). Chunk files use zero-padded form (`F00`–`F07`).
+- **Cross-feature files** are prefixed `Y0`–`Y3`: database schema, API endpoints, error catalog, integrations.
+- **Process steps** are numbered; follow them in order.
+- **Validation rules** are bulleted; all listed rules must be enforced before proceeding to the next step.
+- **Error States** tables use four columns: Scenario | HTTP Status | Error Code | Message.
+- **API Surface (this feature)** is a summary only — full request/response schemas are in `Y1-api.md`.
+- **Schema Surface (this feature)** is a summary only — full DDL is in `Y0-schema.md`.
+- Cross-references use the notation: `see F02 §Process` or `see Y1-api.md §Chat`.
 
 ---
 
 ## Table of Contents
 
-| Chunk | Feature |
-|-------|---------|
-| [F00-document-upload.md](F00-document-upload.md) | F00: Document Upload & Ingestion Pipeline |
-| [F01-chat-qa.md](F01-chat-qa.md) | F01: Chat Interface & Question Answering |
-| [F02-source-citations.md](F02-source-citations.md) | F02: Source Citation & Passage Highlighting |
-| [F03-document-management.md](F03-document-management.md) | F03: Document Management Panel |
-| [F04-chat-history.md](F04-chat-history.md) | F04: Session-Scoped Chat History |
-| [F05-error-handling.md](F05-error-handling.md) | F05: System Feedback & Error Handling |
-| [F06-responsive-ui.md](F06-responsive-ui.md) | F06: Responsive & Accessible UI |
-| [F07-rag-settings.md](F07-rag-settings.md) | F07: Configurable RAG Pipeline Settings |
-| [Y0-schema.md](Y0-schema.md) | Database / Data Schema |
-| [Y1-api.md](Y1-api.md) | REST API Endpoint Catalog |
-| [Y2-errors.md](Y2-errors.md) | Cross-Feature Error Catalog |
-| [Y3-integrations.md](Y3-integrations.md) | External Integration Points |
+| Chunk | Feature | Priority | MVP? |
+|-------|---------|----------|------|
+| [F00](#f00-document-upload--ingestion-pipeline) | Document Upload & Ingestion Pipeline | P0 | ✅ |
+| [F01](#f01-chat-interface--question-answering) | Chat Interface & Question Answering | P0 | ✅ |
+| [F02](#f02-source-citation--passage-highlighting) | Source Citation & Passage Highlighting | P0 | ✅ |
+| [F03](#f03-document-management-panel) | Document Management Panel | P1 | ✅ |
+| [F04](#f04-session-scoped-chat-history) | Session-Scoped Chat History | P1 | ✅ |
+| [F05](#f05-system-feedback--error-handling) | System Feedback & Error Handling | P1 | ✅ |
+| [F06](#f06-responsive--accessible-ui) | Responsive & Accessible UI | P2 | ⚪ |
+| [F07](#f07-configurable-rag-pipeline-settings) | Configurable RAG Pipeline Settings | P2 | ⚪ |
+| [Y0](#y0-database--vector-store-schema) | Database & Vector Store Schema | — | — |
+| [Y1](#y1-rest-api-endpoints) | REST API Endpoints | — | — |
+| [Y2](#y2-cross-feature-error-catalog) | Cross-Feature Error Catalog | — | — |
+| [Y3](#y3-integration-points) | External Integration Points | — | — |
 
 ---
+
+## Cross-Cutting Terminology
+
+| Term | Definition |
+|------|-----------|
+| **Session** | A browser session identified by a server-assigned `session_id` UUID. Scoped in-memory on the server; destroyed on page refresh. |
+| **Document** | A user-uploaded file (PDF, TXT, or DOCX) accepted for ingestion. |
+| **Chunk** | A contiguous text segment produced by splitting a document. Stored with metadata (doc_id, chunk_index, page_number). |
+| **Embedding** | A dense vector representation of a chunk, produced by an embedding model (OpenAI `text-embedding-3-small` or equivalent). |
+| **Vector Store** | The database holding chunk embeddings and metadata (ChromaDB by default; FAISS as alternative). |
+| **RAG Pipeline** | The end-to-end process: ingest → chunk → embed → store → retrieve → generate. |
+| **Top-k** | The number of most-relevant chunks retrieved per query (configurable; default 5). |
+| **LLM** | Large Language Model used for answer generation (OpenAI GPT-4o or Anthropic Claude). |
+| **Grounding** | The constraint that LLM answers must derive solely from retrieved chunks, not the model's training data. |
+| **Citation** | A reference attached to an answer identifying the source document, chunk excerpt, and page number. |
+| **session_id** | A UUID assigned to each browser session; used to namespace vector store collections, chat history, and document lists. |
+| **doc_id** | A UUID assigned to each uploaded document within a session. |
+| **chunk_id** | A UUID or composite key (`doc_id:chunk_index`) identifying a specific text chunk. |
+| **MIME type** | The content-type header or detected magic-byte type of an uploaded file. |
+| **Cosine similarity** | The metric used for vector-store nearest-neighbour retrieval. |
+| **Processing pipeline stages** | `UPLOADING` → `PARSING` → `CHUNKING` → `EMBEDDING` → `INDEXING` → `READY` (or `FAILED`). |
+
+---
+
+## Non-Functional Constraints (Reference)
+
+| Category | Target |
+|----------|--------|
+| Response latency (P95) | < 5 seconds time-to-first-token |
+| Upload-to-ready time | < 30 seconds for a 50-page PDF |
+| Max file size | 20 MB per file |
+| Max documents per session | 10 |
+| Supported formats | PDF, TXT, DOCX |
+| Retrieval hit rate | ≥ 85% relevant chunk in top-k |
+| Grounding compliance | 100% — no external knowledge in answers |
+| Frontend bundle | < 500 KB gzipped |
+| Accessibility | WCAG AA |
+| API key storage | Server-side only; never exposed to frontend |
