@@ -2,14 +2,14 @@
 
 ## Current Position
 - **Phase:** 01-foundation-rag-pipeline
-- **Current Task:** T11 complete
-- **Next Task:** T12
-- **Status:** In progress
+- **Current Task:** COMPLETE
+- **Next Task:** Phase 2 (TBD)
+- **Status:** Phase 01 complete
 
 ## Phase 01 Progress
 
 ### Completed Tasks
-- [x] T01 — Project Scaffold & Configuration
+- [x] T01 — Project Scaffold & Configuration (commit: 5c635f3)
 - [x] T02 — SQLite Database Layer (commit: 458ce27)
 - [x] T03 — Session Management Endpoints (commit: 1d75eaf)
 - [x] T04 — File Validation Utility (commit: 4c172ee)
@@ -20,9 +20,7 @@
 - [x] T09 — Document Ingestion Orchestrator (commit: 9873d4a)
 - [x] T10 — Document Endpoints (commit: ef99a95)
 - [x] T11 — Chat Endpoints (commit: 60657e6)
-
-### Pending Tasks
-- [ ] T12 — Test Suite
+- [x] T12 — Test Suite (commit: f99021a)
 
 ## Decisions
 - Used `SettingsConfigDict(env_file=".env", extra="ignore")` in config to be permissive
@@ -35,8 +33,17 @@
 - Background ingestion uses separate DB connection (_run_ingestion wrapper)
 - Chat router uses prefix="/chat" with get_db_dep pattern; GROUNDING_SYSTEM_PROMPT as constant
 - _generate_response opens own DB connection; refusal = no chunks OR "i could not find" in response
+- ChromaDB page_number=None stored as -1 (metadata limitation), converted back on query
+- asyncio.run() used instead of asyncio.get_event_loop().run_until_complete() for Python 3.14
+- Flexible version ranges (>=) in requirements.txt for Python 3.14 system package compatibility
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
 ## Last Session
-- **Stopped At:** Completed T11 Chat Endpoints (commit: 60657e6)
-- **Resume From:** T12 Test Suite
-- **Timestamp:** 2026-05-26T18:30:00Z
+- **Stopped At:** Completed Phase 01 — all 12 tasks done (T12 commit: f99021a)
+- **Resume From:** Phase 02 (TBD)
+- **Timestamp:** 2026-05-26T15:22:07Z
