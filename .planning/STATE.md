@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 01-foundation-rag-pipeline
-- **Current Task:** T08 complete
-- **Next Task:** T09
+- **Current Task:** T09 complete
+- **Next Task:** T10
 - **Status:** In progress
 
 ## Phase 01 Progress
@@ -17,9 +17,9 @@
 - [x] T06 — Text Chunker (commit: af218e8)
 - [x] T07 — Embedding Service (commit: a01c6ae)
 - [x] T08 — Vector Store Wrapper (commit: bb39067)
+- [x] T09 — Document Ingestion Orchestrator (commit: 9873d4a)
 
 ### Pending Tasks
-- [ ] T09 — Document Ingestion Orchestrator
 - [ ] T10 — Document Endpoints
 - [ ] T11 — Chat Endpoints
 - [ ] T12 — Test Suite
@@ -29,8 +29,9 @@
 - All 16 ErrorCode values defined as `str, Enum` for JSON serialization compatibility
 - FastAPI `create_app()` factory pattern established for testability
 - CORS set to `allow_origins=["*"]` for development
+- _emit() only puts to queue if doc_id already in _progress_queues (no implicit creation)
 
 ## Last Session
-- **Stopped At:** Completed T08 Vector Store Wrapper (ChromaDB)
-- **Resume From:** T09 Document Ingestion Orchestrator
-- **Timestamp:** 2026-05-26T17:00:00Z
+- **Stopped At:** Completed T09 Document Ingestion Orchestrator (commit: 9873d4a)
+- **Resume From:** T10 Document Endpoints
+- **Timestamp:** 2026-05-26T17:30:00Z
