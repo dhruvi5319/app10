@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 01-foundation-rag-pipeline
-- **Current Task:** T10 complete
-- **Next Task:** T11
+- **Current Task:** T11 complete
+- **Next Task:** T12
 - **Status:** In progress
 
 ## Phase 01 Progress
@@ -19,9 +19,9 @@
 - [x] T08 — Vector Store Wrapper (commit: bb39067)
 - [x] T09 — Document Ingestion Orchestrator (commit: 9873d4a)
 - [x] T10 — Document Endpoints (commit: ef99a95)
+- [x] T11 — Chat Endpoints (commit: 60657e6)
 
 ### Pending Tasks
-- [ ] T11 — Chat Endpoints
 - [ ] T12 — Test Suite
 
 ## Decisions
@@ -33,8 +33,10 @@
 - Document router uses prefix="/documents" with get_db_dep async generator dependency
 - /upload/stream route registered before /{doc_id}/status to avoid path conflicts
 - Background ingestion uses separate DB connection (_run_ingestion wrapper)
+- Chat router uses prefix="/chat" with get_db_dep pattern; GROUNDING_SYSTEM_PROMPT as constant
+- _generate_response opens own DB connection; refusal = no chunks OR "i could not find" in response
 
 ## Last Session
-- **Stopped At:** Completed T10 Document Endpoints (commit: ef99a95)
-- **Resume From:** T11 Chat Endpoints
-- **Timestamp:** 2026-05-26T18:00:00Z
+- **Stopped At:** Completed T11 Chat Endpoints (commit: 60657e6)
+- **Resume From:** T12 Test Suite
+- **Timestamp:** 2026-05-26T18:30:00Z
