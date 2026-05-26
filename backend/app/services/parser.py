@@ -54,7 +54,7 @@ def parse_pdf(file_bytes: bytes) -> ParsedDocument:
     finally:
         doc.close()
 
-    full_text = "\n".join(total_text_parts)
+    full_text = "\n\n".join(total_text_parts)
 
     if not full_text.strip():
         raise HTTPException(

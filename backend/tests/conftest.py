@@ -18,6 +18,7 @@ os.environ.setdefault("EMBEDDING_MODEL", "text-embedding-3-small")
 
 # Clear lru_cache so env vars take effect
 from app.config import get_settings
+
 get_settings.cache_clear()
 
 
@@ -33,10 +34,7 @@ FAKE_EMBEDDING = [0.0] * 1536
 def make_fake_embedding_response(texts: list[str]):
     """Build a mock OpenAI embedding response."""
     mock_response = MagicMock()
-    mock_response.data = [
-        MagicMock(embedding=FAKE_EMBEDDING, index=i)
-        for i in range(len(texts))
-    ]
+    mock_response.data = [MagicMock(embedding=FAKE_EMBEDDING, index=i) for i in range(len(texts))]
     return mock_response
 
 
@@ -62,6 +60,7 @@ def make_fake_stream_done():
 # Database fixture — temp SQLite file per test
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def tmp_db_path(tmp_path):
     """Return a temp SQLite path and set it as the DB_PATH for tests."""
@@ -73,10 +72,12 @@ def tmp_db_path(tmp_path):
 # ChromaDB fixture — ephemeral in-memory client
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def ephemeral_chroma():
     """Inject an ephemeral ChromaDB client for all tests."""
     from app.services import vector_store
+
     client = chromadb.EphemeralClient()
     vector_store.set_client(client)
     yield client
@@ -87,6 +88,7 @@ def ephemeral_chroma():
 # ---------------------------------------------------------------------------
 # FastAPI test client fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def client(tmp_db_path, tmp_path):
@@ -100,16 +102,19 @@ def client(tmp_db_path, tmp_path):
 
     from app.database import init_db
     import app.database as db_module
+
     db_module._DB_PATH = tmp_db_path
 
     # Run init_db synchronously using asyncio
-    asyncio.get_event_loop().run_until_complete(init_db(tmp_db_path))
+    asyncio.run(init_db(tmp_db_path))
 
     # Clear session registry
     from app.models.session import sessions
+
     sessions.clear()
 
     from app.main import app
+
     with TestClient(app, raise_server_exceptions=True) as c:
         yield c
 
@@ -120,9 +125,11 @@ def client(tmp_db_path, tmp_path):
 # Mock OpenAI fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_openai_embeddings():
     """Mock OpenAI embeddings to return FAKE_EMBEDDING without real API calls."""
+
     async def fake_create(**kwargs):
         texts = kwargs.get("input", [])
         if isinstance(texts, str):
@@ -150,6 +157,7 @@ def mock_openai_chat():
         class FakeStream:
             def __aiter__(self):
                 return self
+
             async def __anext__(self):
                 if not chunks:
                     raise StopAsyncIteration
@@ -169,6 +177,7 @@ def mock_openai_chat():
 # ---------------------------------------------------------------------------
 # Session fixture
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_session(client):

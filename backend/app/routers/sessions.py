@@ -44,7 +44,7 @@ async def create_session():
     responses={404: {"model": ErrorResponse}},
 )
 async def get_session(session_id: str):
-    """Get session details."""
+    """Get session details and update last_active timestamp."""
     state = sessions.get(session_id)
     if state is None:
         raise HTTPException(
@@ -54,6 +54,8 @@ async def get_session(session_id: str):
                 message=f"Session '{session_id}' not found",
             ).model_dump(),
         )
+    # Update last_active on access
+    state.last_active = datetime.now(timezone.utc)
     return SessionGetResponse(
         session_id=state.session_id,
         created_at=state.created_at.isoformat(),

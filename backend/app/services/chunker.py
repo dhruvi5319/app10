@@ -21,6 +21,12 @@ class ChunkResult:
     token_count: int
 
 
+def _tiktoken_len(text: str, encoding_name: str = _ENCODING_NAME) -> int:
+    """Return the token count for *text* using the specified tiktoken encoding."""
+    encoding = tiktoken.get_encoding(encoding_name)
+    return len(encoding.encode(text))
+
+
 def _count_tokens(text: str, encoding: tiktoken.Encoding) -> int:
     return len(encoding.encode(text))
 
