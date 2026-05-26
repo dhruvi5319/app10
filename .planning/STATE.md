@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 01-foundation-rag-pipeline
-- **Current Task:** T02 complete
-- **Next Task:** T03
+- **Current Task:** T03 complete
+- **Next Task:** T04
 - **Status:** In progress
 
 ## Phase 01 Progress
@@ -11,10 +11,9 @@
 ### Completed Tasks
 - [x] T01 — Project Scaffold & Configuration
 - [x] T02 — SQLite Database Layer (commit: 458ce27)
+- [x] T03 — Session Management Endpoints (commit: 1d75eaf)
 
 ### Pending Tasks
-- [ ] T03 — Session Management Endpoints
-- [ ] T03 — Session Management Endpoints
 - [ ] T04 — File Validation Utility
 - [ ] T05 — Document Parser
 - [ ] T06 — Text Chunker
@@ -32,6 +31,6 @@
 - CORS set to `allow_origins=["*"]` for development
 
 ## Last Session
-- **Stopped At:** Completed T02 SQLite database layer
-- **Resume From:** T03 Session Management Endpoints
-- **Timestamp:** 2026-05-26T14:55:00Z
+- **Stopped At:** Completed T03 Session Management Endpoints
+- **Resume From:** T04 File Validation Utility
+- **Timestamp:** 2026-05-26T15:00:00Z
