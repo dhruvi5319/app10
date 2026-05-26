@@ -1,5 +1,7 @@
 """Pydantic schemas for document request/response."""
 
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -17,11 +19,11 @@ class DocumentStatusResponse(BaseModel):
     file_type: str
     file_size_bytes: int
     status: str
-    chunk_count: int | None = None
-    page_count: int | None = None
-    error_message: str | None = None
+    chunk_count: Optional[int] = None
+    page_count: Optional[int] = None
+    error_message: Optional[str] = None
     uploaded_at: str
-    ready_at: str | None = None
+    ready_at: Optional[str] = None
     file_path: str
 
 
