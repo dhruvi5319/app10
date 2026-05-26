@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 01-foundation-rag-pipeline
-- **Current Task:** T06 complete
-- **Next Task:** T07
+- **Current Task:** T07 complete
+- **Next Task:** T08
 - **Status:** In progress
 
 ## Phase 01 Progress
@@ -15,9 +15,9 @@
 - [x] T04 — File Validation Utility (commit: 4c172ee)
 - [x] T05 — Document Parser (commit: e0f448d)
 - [x] T06 — Text Chunker (commit: af218e8)
+- [x] T07 — Embedding Service (commit: a01c6ae)
 
 ### Pending Tasks
-- [ ] T07 — Embedding Service
 - [ ] T08 — Vector Store Wrapper (ChromaDB)
 - [ ] T09 — Document Ingestion Orchestrator
 - [ ] T10 — Document Endpoints
@@ -31,6 +31,6 @@
 - CORS set to `allow_origins=["*"]` for development
 
 ## Last Session
-- **Stopped At:** Completed T06 Text Chunker
-- **Resume From:** T07 Embedding Service
-- **Timestamp:** 2026-05-26T16:10:00Z
+- **Stopped At:** Completed T07 Embedding Service
+- **Resume From:** T08 Vector Store Wrapper (ChromaDB)
+- **Timestamp:** 2026-05-26T16:30:00Z
