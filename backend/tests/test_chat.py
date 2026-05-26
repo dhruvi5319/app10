@@ -15,6 +15,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def upload_txt(client, session_id):
     """Upload sample.txt and return doc_id."""
     txt = (FIXTURES_DIR / "sample.txt").read_bytes()
@@ -35,39 +36,41 @@ def force_doc_ready(client, session_id, doc_id):
     async def _set_ready():
         db = await get_db()
         try:
-            await update_document_status(
-                db, doc_id, "READY", chunk_count=5, page_count=None
-            )
+            await update_document_status(db, doc_id, "READY", chunk_count=5, page_count=None)
         finally:
             await db.close()
 
-    asyncio.get_event_loop().run_until_complete(_set_ready())
+    asyncio.run(_set_ready())
 
 
 def seed_vector_store(session_id, doc_id):
     """Seed the vector store with a fake chunk so queries can retrieve something."""
     from app.services.vector_store import upsert_chunks
+
     FAKE_EMBEDDING = [0.0] * 1536
     upsert_chunks(
         session_id,
         [f"{doc_id}:0"],
         [FAKE_EMBEDDING],
         ["The contract was signed on March 15 2024."],
-        [{
-            "doc_id": doc_id,
-            "session_id": session_id,
-            "filename": "sample.txt",
-            "file_type": "txt",
-            "chunk_index": 0,
-            "page_number": None,
-            "token_count": 10,
-        }],
+        [
+            {
+                "doc_id": doc_id,
+                "session_id": session_id,
+                "filename": "sample.txt",
+                "file_type": "txt",
+                "chunk_index": 0,
+                "page_number": None,
+                "token_count": 10,
+            }
+        ],
     )
 
 
 # ---------------------------------------------------------------------------
 # Validation tests
 # ---------------------------------------------------------------------------
+
 
 def test_query_empty_returns_422(client, sample_session):
     """POST /api/chat/query with empty query returns 422 EMPTY_QUERY."""
@@ -113,6 +116,7 @@ def test_query_unknown_session_returns_404(client):
 # Chat query with mocked LLM
 # ---------------------------------------------------------------------------
 
+
 def test_query_returns_message_id(client, sample_session, mock_openai_embeddings, mock_openai_chat):
     """POST /api/chat/query with READY doc returns message_id."""
     doc_id = upload_txt(client, sample_session)
@@ -130,6 +134,7 @@ def test_query_returns_message_id(client, sample_session, mock_openai_embeddings
 # ---------------------------------------------------------------------------
 # Chat history tests
 # ---------------------------------------------------------------------------
+
 
 def test_get_history_empty(client, sample_session):
     """GET /api/chat/history/{session_id} returns empty list initially."""
@@ -159,7 +164,7 @@ def test_delete_history(client, sample_session, mock_openai_embeddings, mock_ope
         finally:
             await db.close()
 
-    asyncio.get_event_loop().run_until_complete(_insert())
+    asyncio.run(_insert())
 
     # Verify it exists
     hist_resp = client.get(f"/api/chat/history/{sample_session}")
