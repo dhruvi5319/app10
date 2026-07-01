@@ -49,12 +49,15 @@ export default function App() {
   const { sessionId, loading, error } = useSession();
 
   if (loading) return <LoadingScreen />;
-  if (error) return <ErrorScreen message="Failed to start session. Please refresh." />;
+  if (error)
+    return (
+      <ErrorScreen message="Failed to start session. Please refresh." />
+    );
   if (!sessionId) return null;
 
+  // AppLayout will be rendered here in T03/T11
   return (
     <div style={{ height: '100%' }}>
-      {/* AppLayout will be rendered here after T03 */}
       <p
         style={{
           padding: '24px',
@@ -62,7 +65,7 @@ export default function App() {
           textAlign: 'center',
         }}
       >
-        Session: {sessionId}
+        Session initialised: {sessionId}
       </p>
     </div>
   );
