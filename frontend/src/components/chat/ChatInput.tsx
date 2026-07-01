@@ -101,6 +101,7 @@ export default function ChatInput({
         }}
       >
         <textarea
+          id="chat-input"
           ref={textareaRef}
           value={value}
           onInput={handleInput}
@@ -108,6 +109,7 @@ export default function ChatInput({
           onChange={() => {}} // Controlled via onInput
           placeholder="Ask a question about your documents…"
           disabled={disabled || !hasReadyDocument}
+          aria-label="Message input"
           rows={1}
           style={{
             flex: 1,
@@ -136,6 +138,7 @@ export default function ChatInput({
           className="btn btn-primary"
           onClick={handleSend}
           disabled={!canSend}
+          aria-label="Send message"
           title={
             !hasReadyDocument
               ? 'Upload a document first'

@@ -177,6 +177,7 @@ export default function DocumentCard({ document: doc, onDelete }: DocumentCardPr
           className="btn-ghost"
           onClick={() => setShowDeleteDialog(true)}
           disabled={isProcessing}
+          aria-label={isProcessing ? `Cannot delete ${doc.filename} while processing` : `Delete ${doc.filename}`}
           title={isProcessing ? 'Cannot delete while processing' : `Delete ${doc.filename}`}
           style={{
             padding: 6,

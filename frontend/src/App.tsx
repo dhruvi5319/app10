@@ -89,6 +89,15 @@ function AppInner() {
 
   return (
     <>
+      {/* Skip link — first focusable element; visible on keyboard Tab */}
+      <a
+        href="#chat-input"
+        className="skip-link"
+        onFocus={(e) => e.currentTarget.classList.add('skip-link-visible')}
+        onBlur={(e) => e.currentTarget.classList.remove('skip-link-visible')}
+      >
+        Skip to main content
+      </a>
       <NetworkBanner visible={networkError} onRetry={handleRetry} />
       <AppLayout sessionId={sessionId} />
     </>

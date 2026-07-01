@@ -68,6 +68,7 @@ export default function ChatPanel({
             className="btn btn-secondary"
             onClick={() => setShowClearDialog(true)}
             disabled={queryInFlight}
+            aria-label="Clear chat history"
             style={{ fontSize: '0.8rem', padding: '6px 12px' }}
           >
             Clear Chat

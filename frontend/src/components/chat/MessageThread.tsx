@@ -70,6 +70,9 @@ export default function MessageThread({
     <div
       ref={containerRef}
       onScroll={handleScroll}
+      role="log"
+      aria-live="polite"
+      aria-label="Chat messages"
       style={{
         flex: 1,
         overflowY: 'auto',

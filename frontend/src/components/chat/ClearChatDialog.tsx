@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface ClearChatDialogProps {
   onConfirm: () => Promise<void>;
@@ -13,12 +14,10 @@ export default function ClearChatDialog({
 }: ClearChatDialogProps) {
   const [isClearing, setIsClearing] = useState(false);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => cancelBtnRef.current?.focus(), 50);
-    }
-  }, [open]);
+  // Focus trap: traps Tab inside dialog and restores focus on close
+  useFocusTrap(dialogRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -46,11 +45,15 @@ export default function ClearChatDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget && !isClearing) onCancel();
       }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="clear-dialog-title"
+      aria-hidden="true"
     >
-      <div className="modal-dialog">
+      <div
+        ref={dialogRef}
+        className="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clear-dialog-title"
+      >
         <h2 className="modal-title" id="clear-dialog-title">
           Clear conversation?
         </h2>
@@ -63,6 +66,7 @@ export default function ClearChatDialog({
             className="btn btn-secondary"
             onClick={onCancel}
             disabled={isClearing}
+            aria-label="Cancel clear"
           >
             Cancel
           </button>

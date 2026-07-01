@@ -1,6 +1,8 @@
 export default function TypingIndicator() {
   return (
     <div
+      role="status"
+      aria-label="Assistant is typing"
       style={{
         display: 'flex',
         justifyContent: 'flex-start',

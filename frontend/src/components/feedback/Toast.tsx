@@ -45,8 +45,8 @@ export default function Toast({ toast, onDismiss }: ToastProps) {
         animation: 'slideInRight 0.2s ease',
         pointerEvents: 'all',
       }}
-      role="alert"
-      aria-live="polite"
+      role={toast.variant === 'error' ? 'alert' : 'status'}
+      aria-live={toast.variant === 'error' ? 'assertive' : 'polite'}
     >
       <span
         style={{

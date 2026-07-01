@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface DeleteConfirmDialogProps {
   filename: string;
@@ -15,13 +16,10 @@ export default function DeleteConfirmDialog({
 }: DeleteConfirmDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Focus cancel button when dialog opens
-  useEffect(() => {
-    if (open) {
-      setTimeout(() => cancelBtnRef.current?.focus(), 50);
-    }
-  }, [open]);
+  // Focus trap: traps Tab inside dialog and restores focus on close
+  useFocusTrap(dialogRef, open);
 
   // Trap Escape key
   useEffect(() => {
@@ -50,11 +48,15 @@ export default function DeleteConfirmDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget && !isDeleting) onCancel();
       }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="delete-dialog-title"
+      aria-hidden="true"
     >
-      <div className="modal-dialog">
+      <div
+        ref={dialogRef}
+        className="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+      >
         <h2 className="modal-title" id="delete-dialog-title">
           Delete document?
         </h2>
@@ -75,6 +77,7 @@ export default function DeleteConfirmDialog({
             className="btn btn-secondary"
             onClick={onCancel}
             disabled={isDeleting}
+            aria-label="Cancel delete"
           >
             Cancel
           </button>
