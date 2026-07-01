@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config import get_settings
+from app.config import get_settings, log_startup_config
 from app.database import init_db
 from app.models.errors import ErrorResponse
 from app.routers import chat, documents, sessions
@@ -17,19 +17,11 @@ async def lifespan(app: FastAPI):
     logging.basicConfig(level=getattr(logging, settings.LOG_LEVEL, logging.INFO))
     logger = logging.getLogger("app")
     logger.info("Starting RAG Chatbot backend...")
-    logger.info(f"LLM model: {settings.LLM_MODEL}")
-    logger.info(f"Embedding model: {settings.EMBEDDING_MODEL}")
-    logger.info(f"Chunk size: {settings.CHUNK_SIZE}, overlap: {settings.CHUNK_OVERLAP}")
-    logger.info(f"Top-K: {settings.TOP_K}, Max docs: {settings.MAX_DOCS_PER_SESSION}")
-    if settings.OPENAI_API_KEY:
-        key = settings.OPENAI_API_KEY
-        masked = f"{key[:3]}...{key[-4:]}" if len(key) > 7 else "***"
-        logger.info(f"OpenAI API key: {masked}")
-    else:
-        logger.warning("OPENAI_API_KEY not set — embedding and LLM calls will fail")
 
     await init_db(settings.DATABASE_URL)
     logger.info("Database initialized")
+
+    log_startup_config(settings)
 
     yield
 
