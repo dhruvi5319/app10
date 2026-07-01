@@ -7,7 +7,7 @@
   --color-accent-hover: #7b74ff;
   --color-text-primary: #e8eaf0;
   --color-text-secondary: #8b90a0;
-  --color-text-muted: #6b7280;
+  --color-text-muted: #8b8fa4;     /* 5.90:1 on bg — WCAG AA ✓ */
   --color-success: #34c98b;
   --color-warning: #f5a623;
   --color-warning-text: #1a1a1a;
