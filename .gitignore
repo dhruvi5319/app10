@@ -109,10 +109,14 @@ htmlcov/
 .coverage
 
 # ── OpenCode / Pivota workspace ──
+# NOTE: `.pivota/` is INTENTIONALLY NOT ignored here. Pivota commits
+# `.pivota/start-dev.sh` + `.pivota/dev-script.meta.json` (the dev-server
+# launcher + its drift metadata) so the preview panel can clone main and
+# launch the app. Ignoring `.pivota/` made `git add .pivota/` silently
+# skip the directory, and the launcher never reached GitHub.
 .opencode/
 opencode.json
 opencode.json.bak
 AGENTS.md
 .opencode.session
-.pivota/
 # <<< pivota:gitignore-managed
