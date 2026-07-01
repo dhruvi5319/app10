@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useEffect, DragEvent, ChangeEvent } from 'react';
 import { ALLOWED_EXTENSIONS, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/utils/constants';
 import { ApiError } from '@/api/client';
 import FileProgressBar from './FileProgressBar';
@@ -40,7 +40,13 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
   const [isDragOver, setIsDragOver] = useState(false);
   const [inFlightFiles, setInFlightFiles] = useState<InFlightFile[]>([]);
   const [errors, setErrors] = useState<Array<{ id: string; message: string }>>([]);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Detect touch device on mount
+  useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  }, []);
 
   const dismissError = useCallback((id: string) => {
     setErrors((prev) => prev.filter((e) => e.id !== id));
@@ -170,13 +176,17 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
     ? 'rgba(108, 99, 255, 0.08)'
     : 'transparent';
 
+  const uploadLabel = isTouchDevice
+    ? 'File upload area. Tap to browse files.'
+    : 'File upload area. Press Enter or Space to browse files.';
+
   return (
     <div>
       {/* Drop zone */}
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-label={disabled ? 'Upload disabled' : 'Click or drag files to upload'}
+        aria-label={disabled ? 'Upload disabled' : uploadLabel}
         title={disabled ? 'Start a session first' : undefined}
         onClick={handleClick}
         onKeyDown={(e) => {
@@ -199,13 +209,19 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
         <div style={{ color: 'var(--color-text-muted)', marginBottom: 8 }}>
           <CloudUploadIcon />
         </div>
-        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 4 }}>
-          <strong style={{ color: 'var(--color-text-primary)' }}>Drag files here</strong> or{' '}
-          <span style={{ color: 'var(--color-accent)', textDecoration: 'underline' }}>
-            click to browse
-          </span>
-        </p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+        {isTouchDevice ? (
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+            <strong style={{ color: 'var(--color-text-primary)' }}>Tap to browse files</strong>
+          </p>
+        ) : (
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+            <strong style={{ color: 'var(--color-text-primary)' }}>Drag files here</strong> or{' '}
+            <span style={{ color: 'var(--color-accent)', textDecoration: 'underline' }}>
+              click to browse
+            </span>
+          </p>
+        )}
+        <p className="drag-instruction" style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
           Supports PDF, DOCX, TXT — up to {MAX_FILE_SIZE_MB} MB each
         </p>
       </div>

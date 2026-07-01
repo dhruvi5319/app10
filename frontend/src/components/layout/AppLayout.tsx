@@ -191,6 +191,7 @@ export default function AppLayout({ sessionId }: AppLayoutProps) {
           <DocumentPanel
             sessionId={sessionId}
             onHasReadyDocumentChange={handleHasReadyDocumentChange}
+            onDrawerClose={closeDrawer}
           />
         </div>
       </aside>

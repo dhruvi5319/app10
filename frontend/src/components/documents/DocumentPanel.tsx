@@ -8,6 +8,8 @@ import DocumentCard from './DocumentCard';
 interface DocumentPanelProps {
   sessionId: string;
   onHasReadyDocumentChange?: (hasReady: boolean) => void;
+  /** Called when user swipes/drags drawer down on mobile to close */
+  onDrawerClose?: () => void;
 }
 
 const COLLAPSED_STORAGE_KEY = 'doc_panel_collapsed';
@@ -23,6 +25,7 @@ function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
       style={{
         transform: direction === 'right' ? 'rotate(180deg)' : 'none',
         transition: 'transform 0.2s ease',
@@ -44,6 +47,7 @@ function FolderIcon() {
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
@@ -53,6 +57,7 @@ function FolderIcon() {
 export default function DocumentPanel({
   sessionId,
   onHasReadyDocumentChange,
+  onDrawerClose,
 }: DocumentPanelProps) {
   const { documents, totalSizeBytes, uploadFile, deleteDocument } =
     useDocuments(sessionId);
@@ -84,6 +89,26 @@ export default function DocumentPanel({
     });
   };
 
+  // ── Drag-to-dismiss (mobile bottom drawer) ────────────────────────────────
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY === null) return;
+    const delta = e.touches[0].clientY - touchStartY;
+    if (delta > 100) {
+      setTouchStartY(null);
+      onDrawerClose?.();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartY(null);
+  };
+
   if (collapsed) {
     return (
       <div
@@ -98,12 +123,13 @@ export default function DocumentPanel({
         <button
           className="btn-ghost"
           onClick={toggleCollapsed}
-          title="Expand document panel"
+          aria-label="Expand document panel"
           style={{ padding: 8 }}
         >
           <ChevronIcon direction="right" />
         </button>
         <span
+          aria-hidden="true"
           style={{
             fontSize: '0.65rem',
             color: 'var(--color-text-muted)',
@@ -126,6 +152,9 @@ export default function DocumentPanel({
         flexDirection: 'column',
         height: '100%',
       }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
       {/* Panel header */}
       <div
@@ -144,6 +173,7 @@ export default function DocumentPanel({
           }}
         >
           <h2
+            id="doc-panel-heading"
             style={{
               fontSize: '0.875rem',
               fontWeight: 600,
@@ -155,7 +185,7 @@ export default function DocumentPanel({
           <button
             className="btn-ghost"
             onClick={toggleCollapsed}
-            title="Collapse document panel"
+            aria-label="Collapse document panel"
             style={{ padding: 4 }}
           >
             <ChevronIcon direction="left" />
@@ -192,7 +222,7 @@ export default function DocumentPanel({
             <p style={{ fontSize: '0.875rem', marginBottom: 4, color: 'var(--color-text-secondary)' }}>
               No documents uploaded yet.
             </p>
-            <p style={{ fontSize: '0.78rem' }}>Drag a file here or click to upload.</p>
+            <p style={{ fontSize: '0.78rem' }}>Drag a file here or tap to upload.</p>
           </div>
         ) : (
           documents.map((doc) => (
