@@ -1,20 +1,26 @@
+import { useState, useCallback } from 'react';
+import DocumentPanel from '@/components/documents/DocumentPanel';
+import ChatPanel from '@/components/chat/ChatPanel';
+
 interface AppLayoutProps {
   sessionId: string;
-  children?: React.ReactNode;
 }
 
 /**
  * Two-column desktop shell:
- * - Left aside: 280px fixed-width Document Panel
- * - Right main: flex-1 Chat Panel
+ * - Left aside: 280px fixed-width Document Panel (independently scrollable)
+ * - Right main: flex-1 Chat Panel (independently scrollable)
  *
- * DocumentPanel and ChatPanel are rendered here.
- * Both panels are independently scrollable via overflow-y: auto.
+ * hasReadyDocument is derived from DocumentPanel's useDocuments state
+ * and piped into ChatPanel to gate the send button.
  */
-export default function AppLayout({ sessionId, children }: AppLayoutProps) {
-  // DocumentPanel and ChatPanel will be imported once T06 and T08 are complete.
-  // They are imported lazily below to avoid circular dependency issues during development.
-  // In T11 these will be replaced with direct named imports.
+export default function AppLayout({ sessionId }: AppLayoutProps) {
+  const [hasReadyDocument, setHasReadyDocument] = useState(false);
+
+  const handleHasReadyDocumentChange = useCallback((hasReady: boolean) => {
+    setHasReadyDocument(hasReady);
+  }, []);
+
   return (
     <div
       style={{
@@ -35,12 +41,12 @@ export default function AppLayout({ sessionId, children }: AppLayoutProps) {
           flexDirection: 'column',
         }}
       >
-        {/* DocumentPanel will be inserted here in T06/T11 */}
-        <div style={{ padding: '16px', color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
-          Document Panel — {sessionId.slice(0, 8)}…
-        </div>
-        {children}
+        <DocumentPanel
+          sessionId={sessionId}
+          onHasReadyDocumentChange={handleHasReadyDocumentChange}
+        />
       </aside>
+
       <main
         style={{
           flex: 1,
@@ -50,10 +56,10 @@ export default function AppLayout({ sessionId, children }: AppLayoutProps) {
           overflow: 'hidden',
         }}
       >
-        {/* ChatPanel will be inserted here in T08/T11 */}
-        <div style={{ padding: '16px', color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>
-          Chat Panel — {sessionId.slice(0, 8)}…
-        </div>
+        <ChatPanel
+          sessionId={sessionId}
+          hasReadyDocument={hasReadyDocument}
+        />
       </main>
     </div>
   );
