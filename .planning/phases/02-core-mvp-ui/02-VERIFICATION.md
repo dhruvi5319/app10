@@ -1,86 +1,89 @@
 ---
 phase: 02-core-mvp-ui
-verified: 2026-07-17T17:44:00Z
-status: gaps_found
-score: 5/7 must-haves verified
-re_verification: false
-gaps:
-  - truth: "User drags PDF, watches progress bar advance UPLOADING→PARSING→CHUNKING→EMBEDDING→INDEXING→READY, document appears with green Ready badge"
-    status: partial
-    reason: "FileProgressBar has all 7 stage labels implemented but UploadZone only ever feeds it UPLOADING then READY (skipping the 5 intermediate stages). uploadFile() resolves after the HTTP POST completes — before backend processing — so UploadZone marks the in-flight entry as READY while the document is still PARSING/CHUNKING/EMBEDDING/INDEXING. Intermediate stages are visible only in DocumentCard's Processing badge, not in the FileProgressBar stage labels. Additionally, FileProgressBar shows 'Ready ✓' while the document is still processing, which is misleading."
-    artifacts:
-      - path: "frontend/src/components/upload/UploadZone.tsx"
-        issue: "inFlightFiles status transitions only UPLOADING→READY (line 85, 94); never set to PARSING/CHUNKING/EMBEDDING/INDEXING because onUpload resolves after POST, not after SSE terminal status"
-      - path: "frontend/src/hooks/useDocuments.ts"
-        issue: "uploadFile() (line 184-226) resolves after startSSETracking(docId) is called (line 222), before SSE delivers any stage updates. Stage updates go to documents[] state (DocumentCard), not back to UploadZone's inFlightFiles"
-    missing:
-      - "Wire SSE stage updates from useDocuments back to UploadZone's inFlightFiles so FileProgressBar shows PARSING/CHUNKING/EMBEDDING/INDEXING labels as they arrive"
-      - "OR: keep uploadFile() awaiting terminal status before resolving, so UploadZone stays in-flight through all stages"
-      - "OR: make DocumentCard show a full progress bar with stage labels instead of a generic Processing badge"
-
-  - truth: "Delete document → card disappears with fade-out animation"
-    status: partial
-    reason: "DocumentCard has `transition: 'opacity 0.3s ease'` set (line 114) but deletion removes the card from state synchronously. There is no opacity-to-0 step before removal — no AnimatePresence, no setTimeout with opacity=0 before filter, no CSS exit animation. The card disappears instantly from DOM. The transition property is present but is never triggered by the delete flow."
-    artifacts:
-      - path: "frontend/src/components/documents/DocumentCard.tsx"
-        issue: "Has `transition: 'opacity 0.3s ease'` (line 114) but the transition is only useful for hover/active state changes, not DOM removal. Actual deletion removes the card instantly."
-      - path: "frontend/src/hooks/useDocuments.ts"
-        issue: "deleteDocument() (line 229-263) calls setDocuments(prev => prev.filter(...)) synchronously on success — no delay or opacity-fade step before removal"
-    missing:
-      - "Add a fade-out step before removal: set a 'deleting' flag on the card → CSS opacity:0 → setTimeout 300ms → then remove from state"
-      - "OR: use a library like react-transition-group or framer-motion AnimatePresence to animate exit"
+verified: 2026-07-17T21:30:00Z
+status: human_needed
+score: 7/7 must-haves verified
+re_verification: true
+  previous_status: gaps_found
+  previous_score: 5/7
+  gaps_closed:
+    - "Truth #1: FileProgressBar SSE stage labels — onStageUpdate callback now wired from UploadZone.processFiles → useDocuments.uploadFile → startSSETracking/startPolling → back to UploadZone.inFlightFiles; READY authority transferred exclusively to SSE/polling callback"
+    - "Truth #5: Delete fade-out — DocumentCard.handleDeleteConfirm now sets isDeleting=true (opacity:0) → awaits 300ms CSS transition → calls onDelete; trash button disabled during fade window"
+  gaps_remaining: []
+  regressions: []
 human_verification:
   - test: "Upload journey end-to-end stage labels"
-    expected: "FileProgressBar shows 'Parsing…', 'Chunking…', 'Embedding (N%)…', 'Indexing…' labels sequentially as backend processes the document"
-    why_human: "Cannot observe SSE stage delivery without a running backend and real browser"
+    expected: "FileProgressBar shows 'Uploading…', 'Parsing…', 'Chunking…', 'Embedding (N%)…', 'Indexing…', then 'Ready ✓' labels sequentially as backend processes the document via SSE"
+    why_human: "Cannot observe live SSE delivery from backend without a running server and real browser; the wiring is verified statically but the runtime label sequence requires observation"
   - test: "Q&A with streaming token-by-token delivery"
-    expected: "User sees typing indicator then text appearing character by character with streaming cursor ▍"
+    expected: "User sees three-dot typing indicator then response text appears token by token with the ▍ cursor at the end; cursor disappears when stream ends"
     why_human: "SSE streaming behavior requires live browser session with running backend"
   - test: "Citation section expand/collapse"
-    expected: "Clicking 'Sources (N)' reveals CitationCards; clicking again collapses"
-    why_human: "Interactive UI behavior requires real browser"
+    expected: "Clicking 'Sources (N)' reveals CitationCards with filename, page, excerpt; clicking again collapses; never shown for refusal responses"
+    why_human: "Interactive UI toggle behavior requires real browser"
   - test: "Network failure banner persistence and Retry"
-    expected: "Killing the backend shows persistent red banner; Retry button reloads page"
-    why_human: "Requires simulating network failure in a live environment"
+    expected: "Stopping the backend then performing any action (upload or send) causes a persistent red banner to appear; clicking Retry reloads the page"
+    why_human: "Requires simulating real network failure in a live environment"
 ---
 
 # Phase 2: Core MVP UI Verification Report
 
 **Phase Goal:** A fully built React frontend wired end-to-end to the Phase 1 backend. Every P0 and P1 feature complete and usable by a real user in a browser — upload documents, ask questions, read cited answers, manage document library, scroll session history — no developer tooling required.
-**Verified:** 2026-07-17T17:44:00Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-07-17T21:30:00Z
+**Status:** human_needed (all automated checks pass; 4 items require live browser)
+**Re-verification:** Yes — after gap closure (plans 02-09, 02-10 + code-review fixes)
+
+---
+
+## Re-verification Summary
+
+| Item | Previous | Now | Change |
+|------|----------|-----|--------|
+| Truth #1: Upload stage labels | ⚠️ PARTIAL | ✓ VERIFIED | Gap closed |
+| Truth #5: Delete fade-out | ⚠️ PARTIAL | ✓ VERIFIED | Gap closed |
+| UAT gap: VITE_API_BASE_URL | ⚠️ PARTIAL | ✓ VERIFIED | Gap closed |
+| Truths #2-4, #6-7 | ✓ VERIFIED | ✓ VERIFIED | No regression |
+| Gate: build | ✓ pass | ✓ pass (re-run) | Stable |
+| Gate: tests | ✓ pass (37) | ✓ pass (37, re-run) | Stable |
+| Code review | clean (iter 2) | clean (iter 4) | Further improved |
 
 ---
 
 ## Gate Evidence (mandatory input)
 
+All gate evidence from `02-GATE.md` and `02-REVIEW.md` is green. No unresolved failures.
+
 | Gate | Result |
 |------|--------|
 | `gate_status` | **passed** |
-| `boot_smoke` | skipped (no `.pivota/start-dev.sh`) |
-| Build (`npm run build`) | ✓ pass — 314 modules, 341KB bundle, 0 errors |
-| Tests (`pytest -x -q`) | ✓ pass — 37 passed |
-| Code review iteration 2 | ✓ clean — 0 BLOCKERs, 0 WARNINGs |
-| B1 (apiFetch FastAPI envelope) | ✓ resolved (b76deb2) |
-| W1 (duplicate skip-link) | ✓ resolved (d1892e2) |
-| W2 (dialog aria-hidden) | ✓ resolved (e90e797) |
-| W3 (double upload error) | ✓ resolved (b3d3099) |
-
-Gates are green. All four code review findings confirmed fixed in iteration 2. Build and tests verified fresh (re-run in this verification session).
+| `boot_smoke` | skipped (no `.pivota/start-dev.sh`) — not blocking |
+| Build — gap-closure wave | ✓ pass — 314 modules, 341KB, 0 errors |
+| Build — final regression gate | ✓ pass — 314 modules, 341KB, 1.22s, 0 errors |
+| Tests — gap-closure wave | ✓ pass — 37 passed, 1 warning |
+| Tests — final regression gate | ✓ pass — 37 passed, 1 warning |
+| Code review iteration 4 | ✓ clean — 0 BLOCKERs, 0 WARNINGs |
+| B1 (processFiles premature READY) | ✓ resolved (commit 5d981a7) |
+| B2 (trash button not disabled during fade) | ✓ resolved (commit e47221b) |
+| W1 (polling path skipped READY signal) | ✓ resolved (commit 3dab703) |
+| W3 (no try-catch restoring isDeleting) | ✓ resolved (commit e47221b) |
+| W2 (VITE_API_BASE_URL doc concern) | ✓ emptied in `.env`/`.env.example` — proxy handles `/api` |
+| Gap redrive: UAT gap | ✓ re-driven — `VITE_API_BASE_URL=` confirmed in both env files |
+| Gap redrive: Truth #1 SSE stage labels | ✓ re-driven — `onStageUpdate` grep confirmed in both files |
+| Gap redrive: Truth #5 delete fade | ✓ re-driven — `isDeleting` and `opacity: isDeleting ? 0 : 1` confirmed |
 
 ---
 
-## Spot-Check Results
+## Spot-Check Results (re-run in this verification session)
 
-| Check | Command | Result |
+| Check | Command | Output |
 |-------|---------|--------|
-| Build passes | `npm run build` | ✓ 314 modules, 341KB JS, 8.65KB CSS, 1.27s |
-| TypeScript clean | `tsc --noEmit` | ✓ zero errors |
-| Backend tests | `pytest -x -q` | ✓ 37 passed, 1 warning |
-| Dist bundle exists | `ls dist/assets/` | ✓ JS + CSS bundles present |
-| React 18 | `package.json` | ✓ react@^18.3.1, react-dom@^18.3.1 |
-| Vite + TypeScript | `package.json` | ✓ vite@^5.2.11, typescript@^5.4.5 |
+| Build | `npm run build` | ✓ 314 modules, 341.94KB JS, 8.65KB CSS, 1.42s, 0 errors |
+| Backend tests | `pytest -x -q --tb=short` | ✓ 37 passed, 1 warning in 6.40s |
+| VITE_API_BASE_URL empty | `grep '^VITE_API_BASE_URL' frontend/.env frontend/.env.example` | ✓ `VITE_API_BASE_URL=` (both files) |
+| onStageUpdate in useDocuments | `grep 'onStageUpdate' useDocuments.ts` | ✓ 9 matches — callback threaded through uploadFile → startSSETracking → startPolling |
+| onStageUpdate in UploadZone | `grep 'onStageUpdate' UploadZone.tsx` | ✓ prop declared; callback updates inFlightFiles at lines 93–96 |
+| isDeleting in DocumentCard | `grep 'isDeleting' DocumentCard.tsx` | ✓ 7 matches — state, 300ms await, opacity, button disabled |
+| opacity: isDeleting | `grep 'opacity: isDeleting'` | ✓ line 123: `opacity: isDeleting ? 0 : 1` |
 
 ---
 
@@ -88,15 +91,15 @@ Gates are green. All four code review findings confirmed fixed in iteration 2. B
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | Upload journey with progress bar through all 6 stages | ⚠️ PARTIAL | FileProgressBar implements all stage labels; UploadZone only feeds UPLOADING→READY. Intermediate stages shown only as DocumentCard "Processing" badge, not as labeled progress bar. |
-| 2 | Q&A with streaming (typing indicator → token-by-token) | ✓ VERIFIED | `useChat.ts`: SSE token events append to `streamingContent` (line 153); `TypingIndicator` shown when `queryInFlight && streamingContent === ''` (MessageThread:136); `streamingContent` passed to `MessageBubble` with `▍` cursor (line 100) |
-| 3 | Citations: non-refusal → collapsed "Sources (N)" + CitationCard | ✓ VERIFIED | `CitationSection.tsx`: renders button "Sources ({count})" collapsed by default (line 54-76); `CitationCard` shows filename, page, excerpt; only renders when `is_refusal !== true && retrieved_chunks?.length > 0` |
-| 4 | Grounding in UI: refusal → no citation section | ✓ VERIFIED | `CitationSection.tsx` line 39: `if (is_refusal === true \|\| !retrieved_chunks \|\| retrieved_chunks.length === 0) return null;` — refusal messages receive no citation section |
-| 5 | Delete document → card disappears with fade-out | ⚠️ PARTIAL | Deletion functional (DocumentCard removed from state, API called). `transition: 'opacity 0.3s ease'` present but never triggered for exit — card disappears instantly, no animated fade-out. |
-| 6 | Chat history scrollable; Clear Chat empties thread, not docs | ✓ VERIFIED | `useChat.clearMessages()` calls `clearHistory()` API + `setMessages([])` without touching documents state. `MessageThread` is scrollable with auto-scroll. `ChatPanel` shows "Clear Chat" button only when `messages.length > 0`. |
-| 7 | Error handling: unsupported file, too large, LLM unavailable, network failure | ✓ VERIFIED | (a) Invalid ext → `addError()` in UploadZone (no API call, line 77); (b) Too large → same `addError()` path, no API call; (c) LLM error → `onLlmError()` → `addToast()` + `ERROR_PREFIX` bubble in thread; (d) NETWORK_ERROR → `onNetworkError()` → NetworkBanner with Retry |
+| 1 | User drags PDF, watches progress bar advance UPLOADING→PARSING→CHUNKING→EMBEDDING→INDEXING→READY | ✓ VERIFIED | `UploadZone.processFiles` passes `onStageUpdate` callback to `onUpload`; callback maps each stage to `setInFlightFiles` (lines 91–107); `useDocuments.uploadFile` threads callback through `startSSETracking` (line 231) and `startPolling` (line 122); both call `onStageUpdate?.(status, progress_pct)` on every event; READY authority is exclusively from SSE/polling (comment at lines 108–109 prevents premature READY); `FileProgressBar` receives live stage/progress_pct and renders all 7 labels |
+| 2 | Q&A with streaming: typing indicator → token-by-token → ▍ cursor | ✓ VERIFIED | `useChat.ts`: SSE token events append to `streamingContent`; `TypingIndicator` shown when `queryInFlight && streamingContent === ''`; `streamingContent` passed to `MessageBubble` with `▍` cursor |
+| 3 | Non-refusal answer → collapsed "Sources (N)" section with CitationCards | ✓ VERIFIED | `CitationSection.tsx`: renders collapsed by default; toggle button "Sources ({count})"; `CitationCard` shows filename, page, excerpt; only renders when `is_refusal !== true && retrieved_chunks?.length > 0` |
+| 4 | Refusal answer → no citation section | ✓ VERIFIED | `CitationSection.tsx` line 39: `if (is_refusal === true \|\| !retrieved_chunks \|\| retrieved_chunks.length === 0) return null` |
+| 5 | Delete document → card disappears with fade-out animation | ✓ VERIFIED | `DocumentCard.handleDeleteConfirm`: sets `isDeleting(true)` → `opacity: isDeleting ? 0 : 1` triggers CSS transition → `await setTimeout(300ms)` → calls `onDelete`; trash button `disabled={isProcessing \|\| isDeleting}` closes double-delete race; catch restores `isDeleting(false)` on error |
+| 6 | Chat history scrollable; Clear Chat empties thread without touching documents | ✓ VERIFIED | `useChat.clearMessages()` calls `clearHistory()` API + `setMessages([])` without touching document state; `ChatPanel` shows Clear Chat only when `messages.length > 0`; `MessageThread` scrollable with auto-scroll |
+| 7 | Error handling: unsupported file, too large, LLM unavailable, network failure | ✓ VERIFIED | (a) Invalid ext → `addError()` in UploadZone, no API call; (b) Too large → same path; (c) LLM error → `onLlmError()` → `addToast()` + ERROR_PREFIX bubble in thread; (d) NETWORK_ERROR → `onNetworkError()` → NetworkBanner with Retry |
 
-**Score: 5/7 truths verified** (2 partial gaps)
+**Score: 7/7 truths verified**
 
 ---
 
@@ -104,24 +107,24 @@ Gates are green. All four code review findings confirmed fixed in iteration 2. B
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `frontend/src/App.tsx` | ✓ VERIFIED | ToastProvider wraps AppInner; NetworkBanner wired to NETWORK_ERROR; skip-link present |
-| `frontend/src/hooks/useSession.ts` | ✓ VERIFIED | sessionStorage GET-reuse / POST-fallback (lines 21-46); 404 → remove + create new |
-| `frontend/src/hooks/useDocuments.ts` | ✓ VERIFIED | SSE upload tracking + polling fallback; cleanup on unmount; NETWORK_ERROR propagation |
+| `frontend/src/App.tsx` | ✓ VERIFIED | ToastProvider wraps AppInner; NetworkBanner wired; skip-link present |
+| `frontend/src/hooks/useSession.ts` | ✓ VERIFIED | sessionStorage GET-reuse / POST-fallback; 404 → remove + create new |
+| `frontend/src/hooks/useDocuments.ts` | ✓ VERIFIED | SSE upload tracking with `onStageUpdate` callback; polling fallback with symmetric callback; cleanup on unmount; NETWORK_ERROR propagation |
 | `frontend/src/hooks/useChat.ts` | ✓ VERIFIED | SSE token streaming; optimistic messages; error bubble + toast on LLM failure |
-| `frontend/src/hooks/useToast.ts` | ✓ VERIFIED | Auto-dismiss (5s) + persist flag; timer cleanup in dismissToast |
-| `frontend/src/api/client.ts` | ✓ VERIFIED | B1 fix confirmed: `body?.detail && typeof body.detail === 'object' ? body.detail : body` (line 59); NETWORK_ERROR on TypeError |
-| `frontend/src/components/upload/UploadZone.tsx` | ⚠️ PARTIAL | Drag/drop/click works; client-side validation works; FileProgressBar shown; but only UPLOADING→READY stages fed to FileProgressBar |
-| `frontend/src/components/upload/FileProgressBar.tsx` | ✓ VERIFIED | All 7 stage labels implemented (UPLOADING, PARSING, CHUNKING, EMBEDDING, INDEXING, READY, FAILED); EMBEDDING shows live progress_pct; indeterminate animation for other in-progress stages; Retry button on FAILED |
-| `frontend/src/components/documents/DocumentPanel.tsx` | ✓ VERIFIED | Lists documents from useDocuments; hasReadyDocument notification via useEffect; UploadZone wired at bottom |
-| `frontend/src/components/documents/DocumentCard.tsx` | ⚠️ PARTIAL | Status badges (green Ready, yellow Processing+spinner, red Failed) correct; delete dialog wired; transition CSS present; but no actual fade-out exit animation |
-| `frontend/src/components/chat/ChatPanel.tsx` | ✓ VERIFIED | useChat wired with onNetworkError + handleLlmError; MessageThread + ChatInput rendered; Clear Chat dialog |
-| `frontend/src/components/chat/MessageBubble.tsx` | ✓ VERIFIED | User/assistant/error bubble differentiation; streaming cursor ▍; CitationSection for non-error non-streaming assistant messages; onRetry with pre-bound priorUserQuery |
-| `frontend/src/components/chat/ChatInput.tsx` | ✓ VERIFIED | `canSend = !isEmpty && !disabled && hasReadyDocument` (line 39); send button disabled; guard message shown when no ready doc |
-| `frontend/src/components/citations/CitationSection.tsx` | ✓ VERIFIED | Collapsed by default; toggle with chevron; count shown; renders CitationCards when expanded; hidden for refusals |
-| `frontend/src/components/citations/CitationCard.tsx` | ✓ VERIFIED | filename, page (null→'N/A'), chunk_index+1, excerpt; 800-char truncation with Show more/less; null excerpt guard |
-| `frontend/src/components/feedback/NetworkBanner.tsx` | ✓ VERIFIED | Sticky top, role="alert", aria-live="assertive"; Retry button calls onRetry |
-| `frontend/src/components/feedback/ToastContainer.tsx` | ✓ VERIFIED | Fixed position, zIndex 9999; renders Toast components; hidden when empty |
-| `frontend/src/context/ToastContext.tsx` | ✓ VERIFIED | ToastProvider wraps children + renders ToastContainer; useToastContext throws if used outside provider |
+| `frontend/src/hooks/useToast.ts` | ✓ VERIFIED | Auto-dismiss (5s) + persist flag; timer cleanup |
+| `frontend/src/api/client.ts` | ✓ VERIFIED | FastAPI envelope unwrap (`body.detail`); NETWORK_ERROR on TypeError |
+| `frontend/src/components/upload/UploadZone.tsx` | ✓ VERIFIED | `onUpload` prop accepts `onStageUpdate` callback; callback updates `inFlightFiles` for every stage including PARSING/CHUNKING/EMBEDDING/INDEXING; READY exclusively from callback; no premature state mutation in success path |
+| `frontend/src/components/upload/FileProgressBar.tsx` | ✓ VERIFIED | All 7 stage labels; EMBEDDING shows `progress_pct`; indeterminate animation for other in-progress; Retry on FAILED |
+| `frontend/src/components/documents/DocumentPanel.tsx` | ✓ VERIFIED | `uploadFile` from `useDocuments` passed directly to `UploadZone` as `onUpload` — the callback signature is preserved end-to-end |
+| `frontend/src/components/documents/DocumentCard.tsx` | ✓ VERIFIED | `isDeleting` state; 300ms await before `onDelete`; `opacity: isDeleting ? 0 : 1` drives CSS transition; trash button disabled during fade; catch restores on error |
+| `frontend/src/components/chat/ChatPanel.tsx` | ✓ VERIFIED | `useChat` wired with `onNetworkError` + `handleLlmError`; MessageThread + ChatInput rendered; Clear Chat dialog |
+| `frontend/src/components/chat/MessageBubble.tsx` | ✓ VERIFIED | User/assistant/error differentiation; streaming cursor ▍; CitationSection for non-error non-streaming assistant messages |
+| `frontend/src/components/chat/ChatInput.tsx` | ✓ VERIFIED | `canSend = !isEmpty && !disabled && hasReadyDocument`; guard message when no ready doc |
+| `frontend/src/components/citations/CitationSection.tsx` | ✓ VERIFIED | Collapsed by default; toggle; count shown; CitationCards when expanded; hidden for refusals |
+| `frontend/src/components/citations/CitationCard.tsx` | ✓ VERIFIED | filename, page, chunk_index+1, excerpt; 800-char truncation with Show more/less |
+| `frontend/src/components/feedback/NetworkBanner.tsx` | ✓ VERIFIED | Sticky top; role="alert"; aria-live="assertive"; Retry button |
+| `frontend/src/components/feedback/ToastContainer.tsx` | ✓ VERIFIED | Fixed position; renders Toast components; hidden when empty |
+| `frontend/src/context/ToastContext.tsx` | ✓ VERIFIED | ToastProvider wraps children + renders ToastContainer |
 
 ---
 
@@ -129,33 +132,30 @@ Gates are green. All four code review findings confirmed fixed in iteration 2. B
 
 | From | To | Via | Status | Notes |
 |------|----|-----|--------|-------|
-| `App.tsx` | `ToastProvider` | wraps entire AppInner | ✓ WIRED | Line 110-113 |
-| `App.tsx` | `NetworkBanner` | `visible={networkError}` | ✓ WIRED | Line 102 |
-| `App.tsx` | `AppLayout` | `onNetworkError={handleNetworkError}` | ✓ WIRED | Line 103 |
-| `AppLayout` | `DocumentPanel` | `onHasReadyDocumentChange` | ✓ WIRED | Line 184 |
-| `AppLayout` | `ChatPanel` | `hasReadyDocument={hasReadyDocument}` | ✓ WIRED | Line 205 |
-| `DocumentPanel` | `useDocuments` | `uploadFile`, `deleteDocument`, `documents` | ✓ WIRED | Line 65-66 |
-| `DocumentPanel` → `AppLayout` | `hasReadyDocument` | `onHasReadyDocumentChange` useEffect | ✓ WIRED | Lines 76-81 |
-| `ChatPanel` | `useChat` | `onNetworkError`, `handleLlmError` | ✓ WIRED | Line 29-30 |
-| `ChatPanel` | `useToastContext` | `addToast` in `handleLlmError` | ✓ WIRED | Lines 20-27 |
-| `ChatInput` | `hasReadyDocument` | gates `canSend` + `disabled` | ✓ WIRED | Lines 39, 111, 140 |
-| `useDocuments.uploadFile` | SSE stage updates | `documents[]` state (NOT UploadZone inFlightFiles) | ⚠️ PARTIAL | Only reaches DocumentCard, not FileProgressBar |
-| `useChat.sendMessage` | SSE token stream | `streamingContent` state | ✓ WIRED | Lines 128-211 |
-| `useSession` | `sessionStorage` | GET-reuse / POST-fallback | ✓ WIRED | Lines 21-46 |
-| `apiFetch` | FastAPI error envelope | `body.detail` unwrap (B1 fix) | ✓ WIRED | Line 59 |
-| `useChat` (NETWORK_ERROR) | NetworkBanner | `onNetworkError?.()` → `setNetworkError(true)` | ✓ WIRED | Wave 6 fix confirmed |
-| `useDocuments` (NETWORK_ERROR) | NetworkBanner | `onNetworkError?.()` propagated | ✓ WIRED | Lines 72-74, 209-211, 234-236 |
+| `App.tsx` | `ToastProvider` | wraps entire AppInner | ✓ WIRED | |
+| `App.tsx` | `NetworkBanner` | `visible={networkError}` | ✓ WIRED | |
+| `AppLayout` | `DocumentPanel` | `onHasReadyDocumentChange` | ✓ WIRED | |
+| `AppLayout` | `ChatPanel` | `hasReadyDocument={hasReadyDocument}` | ✓ WIRED | |
+| `DocumentPanel` | `useDocuments` | `uploadFile`, `deleteDocument`, `documents` | ✓ WIRED | |
+| `DocumentPanel` | `UploadZone` | `onUpload={uploadFile}` — callback signature preserved | ✓ WIRED | Key to Truth #1 fix |
+| `UploadZone.processFiles` | `onUpload(file, onStageUpdate)` | callback updates `inFlightFiles` | ✓ WIRED | Confirmed lines 91–107 |
+| `useDocuments.uploadFile` | `startSSETracking(docId, onStageUpdate)` | threads callback through | ✓ WIRED | Line 231 |
+| `startSSETracking` | `onStageUpdate?.(data.status, data.progress_pct)` | every SSE event | ✓ WIRED | Line 157 |
+| `startPolling` | `onStageUpdate?.(doc.status, 0)` | every poll tick, unconditionally | ✓ WIRED | Line 122 (W1 fix) |
+| `DocumentCard.handleDeleteConfirm` | `isDeleting` → opacity → 300ms → `onDelete` | sequential await | ✓ WIRED | Lines 101–109 |
+| `ChatPanel` | `useChat` | `onNetworkError`, `handleLlmError` | ✓ WIRED | |
+| `ChatInput` | `hasReadyDocument` | gates `canSend` + `disabled` | ✓ WIRED | |
+| `useChat.sendMessage` | SSE token stream | `streamingContent` state | ✓ WIRED | |
+| `useSession` | `sessionStorage` | GET-reuse / POST-fallback | ✓ WIRED | |
+| `apiFetch` | FastAPI error envelope | `body.detail` unwrap | ✓ WIRED | |
+| `useChat` (NETWORK_ERROR) | `NetworkBanner` | `onNetworkError?.()` → `setNetworkError(true)` | ✓ WIRED | |
+| `useDocuments` (NETWORK_ERROR) | `NetworkBanner` | `onNetworkError?.()` propagated | ✓ WIRED | |
 
 ---
 
 ## Anti-Patterns Scan
 
-No blocking anti-patterns found. All `return null` / `return <>` / `=> {}` patterns are legitimate:
-- `return null` in CitationSection (correct: refusal guard), NetworkBanner (correct: hidden state), ToastContainer (correct: empty state), ClearChatDialog/DeleteConfirmDialog (correct: closed state), DocumentCard.StatusBadge (correct: unrecognized status), App.tsx (correct: awaiting session)
-- `onChange={() => {}}` in ChatInput is documented ("Controlled via onInput") — `onInput` is the actual handler
-- `sendMessage(query).catch(() => {})` in ChatPanel is intentional — errors surface as error bubbles
-
-All grep matches for "placeholder" are code-level variable names (`placeholderIdRef`, `createAssistantPlaceholder`) not stub implementations.
+No blocking anti-patterns found. All `return null` / empty patterns are legitimate (refusal guard, closed-dialog guard, empty-state guard). All `onChange={() => {}}` patterns documented (real handler on `onInput`). `sendMessage(...).catch(() => {})` is intentional — errors surface as in-thread error bubbles.
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
@@ -163,71 +163,63 @@ All grep matches for "placeholder" are code-level variable names (`placeholderId
 
 ---
 
-## Architecture Requirements Verification
-
-| Requirement | Status | Evidence |
-|-------------|--------|---------|
-| Vite + React 18 + TypeScript at `frontend/` | ✓ | react@^18.3.1, vite@^5.2.11, ts@^5.4.5 in package.json |
-| Session management via sessionStorage + GET-reuse/POST-fallback | ✓ | useSession.ts lines 21-46 |
-| SSE streaming for upload progress | ✓ | useDocuments.startSSETracking; polling fallback |
-| SSE streaming for chat tokens | ✓ | useChat.sendMessage opens EventSource for tokens |
-| `hasReadyDocument` gates send button | ✓ | ChatInput `canSend` line 39; textarea `disabled` line 111 |
-| ToastContext provider wraps app | ✓ | App.tsx lines 109-113 |
-| NetworkBanner wired to NETWORK_ERROR from ApiError | ✓ | Wave 6 fix; confirmed in useChat:103-104, useDocuments:72-73, 209-210, 234-235 |
-
----
-
 ## Human Verification Required
 
 ### 1. Upload Stage Labels in FileProgressBar
-**Test:** Upload a document and observe whether the FileProgressBar (the animated bar inside UploadZone) shows the text labels "Parsing…", "Chunking…", "Embedding (N%)…", "Indexing…" during processing.
-**Expected:** Labels advance one-by-one as backend processes the document.
-**Why human:** Static analysis confirms UploadZone only passes UPLOADING→READY status to FileProgressBar; runtime behavior of the live SSE→UI wiring needs browser observation.
 
-### 2. Delete fade-out animation
-**Test:** Click delete on a DocumentCard, confirm in the dialog, and observe whether the card fades out smoothly or disappears instantly.
-**Expected:** Card fades from opacity 1 to 0 over ~300ms before being removed from the list.
-**Why human:** Cannot simulate DOM transition animations without a browser runtime.
+**Test:** Upload a PDF and observe the FileProgressBar inside UploadZone. Watch whether the text labels read "Uploading…", then "Parsing…", "Chunking…", "Embedding (N%)…", "Indexing…", then "Ready ✓" sequentially.
+**Expected:** Each label appears as the backend emits the corresponding SSE event; Embedding shows a numeric percentage; the bar auto-removes ~2 seconds after READY.
+**Why human:** Static analysis confirms the wiring (UploadZone callback → useDocuments → SSE/polling → inFlightFiles); runtime label delivery requires a live backend emitting SSE events and a browser observing them.
 
-### 3. Q&A streaming token-by-token
-**Test:** Type a question about an uploaded PDF and press Enter; observe the typing indicator and subsequent streaming.
-**Expected:** Three-dot typing indicator appears, then response text builds one token at a time with the `▍` cursor at the end.
+### 2. Q&A Streaming Token-by-Token
+
+**Test:** Type a question about an uploaded PDF and press Enter.
+**Expected:** Three-dot typing indicator (TypingIndicator) appears first; then response text builds one token at a time with `▍` cursor at the end; cursor disappears when the stream closes.
 **Why human:** Requires live SSE delivery from running backend.
 
-### 4. Network failure → persistent banner + Retry
-**Test:** Stop the backend, then perform any action (send message, upload file). Observe the UI.
-**Expected:** Red "Connection lost" banner appears at top, persists; clicking Retry reloads the page.
-**Why human:** Requires simulating real network failure.
+### 3. Citation Section Expand/Collapse
+
+**Test:** Ask a question that returns a grounded (non-refusal) answer. Click "Sources (N)". Click again.
+**Expected:** First click expands CitationCards showing filename, page, and excerpt. Second click collapses them. Refusal responses show no Sources section at all.
+**Why human:** Interactive toggle behavior requires real browser.
+
+### 4. Network Failure → Persistent Banner + Retry
+
+**Test:** Stop the backend, then send a message or upload a file.
+**Expected:** Red "Connection lost" banner appears at the top of the page, persists (does not auto-dismiss); clicking "Retry" reloads the page.
+**Why human:** Requires simulating real network failure in a live environment.
 
 ---
 
-## Gaps Summary
+## Regression Check
 
-Two gaps prevent full goal achievement for success criteria #1 and #5:
+All 5 truths that were VERIFIED in the previous run were re-checked for regression:
 
-**Gap 1 — FileProgressBar stage labels not wired (Success Criterion #1)**
+| Truth | Regression? | Evidence |
+|-------|-------------|---------|
+| #2 Q&A streaming | None | `useChat.ts` unchanged; SSE token path intact |
+| #3 Citations non-refusal | None | `CitationSection.tsx` unchanged |
+| #4 Refusal guard | None | `CitationSection.tsx` line 39 guard intact |
+| #6 Clear Chat / scroll | None | `useChat.clearMessages()` unchanged |
+| #7 Error handling | None | All four error paths confirmed intact |
 
-The phase's core upload UX promise — "watches progress bar advance through UPLOADING → PARSING → CHUNKING → EMBEDDING → INDEXING → READY" — is not delivered. `FileProgressBar` has all stage labels implemented and ready, but `UploadZone.tsx` only ever feeds it two status values: `UPLOADING` (when file upload POST begins) and `READY` (immediately after the POST returns, before backend actually processes the document). This also creates a misleading moment where FileProgressBar shows "Ready ✓" while the document is still being parsed/chunked/embedded.
-
-The SSE stage updates from the backend (PARSING, CHUNKING, EMBEDDING, INDEXING) correctly update `documents[]` state in `useDocuments`, which DocumentCard displays as a generic "Processing" badge — but that is a badge, not the labeled progress bar the spec requires.
-
-**Root cause:** `uploadFile()` in `useDocuments` resolves/returns after starting SSE tracking (`startSSETracking`), but `UploadZone.processFiles()` transitions `inFlightFiles` to READY when `await onUpload(file)` resolves (line 94). There is no mechanism to relay subsequent SSE stage updates from `useDocuments` back into `UploadZone`'s `inFlightFiles`.
-
-**Gap 2 — Delete card has no exit fade animation (Success Criterion #5)**
-
-`deleteDocument()` removes the card from `documents[]` state synchronously via `setDocuments(prev => prev.filter(...))`. `DocumentCard` has `transition: 'opacity 0.3s ease'` in its inline style, but this CSS transition is only active for CSS property changes (e.g., hover), not DOM removal. No opacity-to-0 step is applied before removal, so the card vanishes instantly.
-
-**Note:** Both gaps are UX/animation gaps, not functional gaps. The upload and delete operations themselves work correctly end-to-end; the missing pieces are intermediate visual feedback that the spec explicitly required.
+Build and tests re-run in this session: 314 modules, 0 errors; 37 passed, 1 warning. No regressions detected.
 
 ---
 
 ## Summary
 
-The Phase 2 React frontend is functionally complete and correctly wired to the backend. All core behaviors work: session management, document upload, chat with streaming, citations with refusal enforcement, error handling, and Clear Chat. The code review (iteration 2) found zero remaining blockers or warnings. Build and tests pass cleanly.
+All 7 must-have truths are now VERIFIED by static analysis and build/test gates. The two gaps from the previous verification (Truth #1 — FileProgressBar stage labels; Truth #5 — delete fade-out) have been closed by plans 02-09 and 02-10, with code-review findings B1/B2/W1/W3 resolved in iteration 4.
 
-Two UX gaps remain against the explicit success criteria: the FileProgressBar never shows intermediate processing stage labels (PARSING/CHUNKING/EMBEDDING/INDEXING), and the delete card does not fade out before removal. These require targeted fixes to the `UploadZone`↔`useDocuments` stage-update wiring and the deletion animation flow.
+**Gap 1 closure (Truth #1):** `UploadZone.processFiles` now passes an `onStageUpdate` callback as the second argument to `onUpload`. `useDocuments.uploadFile` accepts this callback and threads it through `startSSETracking` (and `startPolling` as fallback). Every SSE event calls `onStageUpdate(status, progress_pct)`, which `UploadZone` maps to a `setInFlightFiles` update — making `FileProgressBar` display PARSING/CHUNKING/EMBEDDING/INDEXING labels as they arrive. READY is no longer set prematurely in the HTTP POST success path; the callback is the sole authority for terminal status.
+
+**Gap 2 closure (Truth #5):** `DocumentCard.handleDeleteConfirm` sets `isDeleting(true)`, which drives `opacity: isDeleting ? 0 : 1` with `transition: 'opacity 0.3s ease'`. A 300ms `setTimeout` awaits the CSS transition before calling `onDelete`. The trash button is disabled during the fade window (`disabled={isProcessing || isDeleting}`) to prevent double-delete. On error, a catch block restores `isDeleting(false)` so the card reappears for retry.
+
+**UAT gap closure:** `VITE_API_BASE_URL=` is empty in both `frontend/.env` and `frontend/.env.example`; Vite's proxy handles all `/api` routing without a hardcoded URL.
+
+The phase is functionally complete and all automated verifications pass. Four behaviors require live browser observation to confirm end-to-end runtime delivery.
 
 ---
 
-_Verified: 2026-07-17T17:44:00Z_
+_Verified: 2026-07-17T21:30:00Z_
 _Verifier: Claude (pivota_spec-verifier)_
