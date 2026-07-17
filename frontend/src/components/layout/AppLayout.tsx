@@ -136,16 +136,6 @@ export default function AppLayout({ sessionId, onNetworkError }: AppLayoutProps)
         position: 'relative',
       }}
     >
-      {/* Skip link (first DOM element for keyboard users) */}
-      <a
-        href="#chat-input"
-        className="skip-link"
-        onFocus={(e) => e.currentTarget.classList.add('skip-link-visible')}
-        onBlur={(e) => e.currentTarget.classList.remove('skip-link-visible')}
-      >
-        Skip to main content
-      </a>
-
       {/* Mobile backdrop */}
       {isDrawerOpen && (
         <div
