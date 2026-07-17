@@ -95,14 +95,18 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
                 f.id === fileId ? { ...f, status, progress_pct } : f,
               ),
             );
+            // When SSE/polling signals a terminal status, schedule removal.
+            // Do NOT mark READY here from the processFiles success path — the HTTP POST
+            // resolves before any SSE event arrives, so setting READY here would cause
+            // UPLOADING→READY→PARSING→…→READY regression.
+            if (status === 'READY' || status === 'FAILED') {
+              setTimeout(() => {
+                setInFlightFiles((prev) => prev.filter((f) => f.id !== fileId));
+              }, 2000);
+            }
           });
-          // Mark as completed — remove from in-flight after brief delay
-          setInFlightFiles((prev) =>
-            prev.map((f) => (f.id === fileId ? { ...f, status: 'READY', progress_pct: 100 } : f)),
-          );
-          setTimeout(() => {
-            setInFlightFiles((prev) => prev.filter((f) => f.id !== fileId));
-          }, 2000);
+          // uploadFile resolves right after the HTTP POST ACK, before SSE events fire.
+          // Do NOT mark READY here — let onStageUpdate('READY') from SSE/polling do it.
         } catch (err) {
           const message =
             err instanceof ApiError
