@@ -13,6 +13,10 @@ waves:
     build: pass
     tests: pass
     fix_attempts: 0
+  - wave: 4
+    build: pass
+    tests: pass
+    fix_attempts: 0
 ---
 
 ## Wave 2
@@ -25,6 +29,12 @@ waves:
 Note: pytest was not on PATH initially (used `~/.local/bin/pytest`); backend deps installed before test run (chromadb missing from system Python). Tests pass cleanly.
 
 ## Wave 3
+
+- Build: `cd frontend && npm run build` → pass
+- Tests: `pytest -x -q --tb=short` → pass (37 passed)
+- Fix attempts: 0/3
+
+## Wave 4
 
 - Build: `cd frontend && npm run build` → pass
 - Tests: `pytest -x -q --tb=short` → pass (37 passed)
