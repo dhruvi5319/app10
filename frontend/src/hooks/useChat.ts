@@ -36,6 +36,7 @@ export function useChat(
   sessionId: string,
   _hasReadyDocument: boolean,
   onNetworkError?: () => void,
+  onLlmError?: (message: string) => void,
 ): {
   messages: Message[];
   streamingContent: string;
@@ -109,6 +110,9 @@ export function useChat(
               ? err.message
               : 'Failed to send message.';
 
+        // Notify caller of LLM/API error for toast display
+        onLlmError?.(errorText);
+
         // Replace placeholder with error bubble
         setMessages((prev) =>
           prev.map((m) =>
@@ -165,6 +169,9 @@ export function useChat(
             stream.close();
             activeStreamRef.current = null;
 
+            // Notify caller of LLM error for toast display
+            onLlmError?.(data.message);
+
             setMessages((prev) =>
               prev.map((m) =>
                 m.message_id === placeholderIdRef.current
@@ -203,7 +210,7 @@ export function useChat(
         placeholderIdRef.current = null;
       };
     },
-    [sessionId, queryInFlight, onNetworkError],
+    [sessionId, queryInFlight, onNetworkError, onLlmError],
   );
 
   const clearMessages = useCallback(async () => {

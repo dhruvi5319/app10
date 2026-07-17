@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useChat } from '@/hooks/useChat';
+import { useToastContext } from '@/context/ToastContext';
 import MessageThread from './MessageThread';
 import ChatInput from './ChatInput';
 import ClearChatDialog from './ClearChatDialog';
@@ -16,8 +17,17 @@ export default function ChatPanel({
   hasReadyDocument,
   onNetworkError,
 }: ChatPanelProps) {
+  const { addToast } = useToastContext();
+
+  const handleLlmError = useCallback(
+    (message: string) => {
+      addToast(message, 'error', false);
+    },
+    [addToast],
+  );
+
   const { messages, streamingContent, queryInFlight, sendMessage, clearMessages } =
-    useChat(sessionId, hasReadyDocument, onNetworkError);
+    useChat(sessionId, hasReadyDocument, onNetworkError, handleLlmError);
 
   const [showClearDialog, setShowClearDialog] = useState(false);
 
