@@ -56,6 +56,8 @@ iteration: 3
 
 - **Fix direction:** Do not mark the inFlightFiles entry as READY from the `processFiles` catch-success path. Instead, let the `onStageUpdate` callback own the terminal transition: add a guard in `processFiles` so it only marks READY if no `onStageUpdate` callback was provided (backwards compat), or have `onUpload` return a promise that does not resolve until the SSE terminal event fires (propagate a secondary promise through the callback). Alternatively, suppress the `onStageUpdate` callbacks from overriding a status that is already terminal — but the cleanest fix is to remove the immediate READY set from `processFiles` and rely solely on `onStageUpdate('READY')` to mark completion.
 
+**Resolution:** fixed (5d981a7) — removed the immediate `READY`/`setTimeout` from `processFiles`; moved the 2-second removal timeout into the `onStageUpdate` callback triggered only when `status === 'READY' || status === 'FAILED'`. SSE/polling is now the sole authority for terminal transitions. Also eliminates the secondary bug where the 2s timeout removed the entry before SSE completed.
+
 ---
 
 ### B2: Trash button not disabled during 300 ms `isDeleting` fade — double-delete API call possible
@@ -91,6 +93,8 @@ iteration: 3
 
 - **Fix direction:** Add `isDeleting` to the `disabled` condition on the trash button: `disabled={isProcessing || isDeleting}`. Optionally also update `aria-label` and `title` to reflect the deleting state.
 
+**Resolution:** fixed (e47221b) — `disabled={isProcessing || isDeleting}` added; `aria-label`, `title`, and icon colour updated to reflect the deleting state.
+
 ---
 
 ## WARNINGs
@@ -111,6 +115,8 @@ iteration: 3
   ```
   In the SSE path the `READY` call on `onStageUpdate` is the one that should eventually mark the inFlightFiles entry as ready (once B1 is fixed). In the polling path that signal is never sent, so the polling-path upload would also need the direct processFiles READY set (or a terminal signal from the polling path) to function. Fixing B1 will need to account for both paths symmetrically.
 
+**Resolution:** fixed (3dab703) — removed the `!TERMINAL_STATUSES.includes(doc.status)` guard from the polling path so `onStageUpdate` is called unconditionally for all statuses, mirroring the SSE path. The READY signal now propagates through polling as well, triggering the inFlightFiles removal scheduled in the B1 fix.
+
 ---
 
 ### W2: `VITE_API_BASE_URL=` (empty) in committed `.env` silently breaks any non-proxy production deployment
@@ -124,6 +130,8 @@ iteration: 3
   The Vite proxy is in the `server` block only — it does not affect production builds. `npm run build` succeeds with no warnings even when `VITE_API_BASE_URL` is empty.
 
 - **Note:** The `.env.example` guidance is correct; the risk is documentation/operational, not a runtime error in the intended dev setup. Classified WARNING rather than BLOCKER because the dev proxy use case (the intended mode) works correctly.
+
+**Resolution:** disputed — the dev setup (Vite proxy) works correctly; the risk is a documentation concern only. No code change made per scope rules (operational risk, not a runtime bug in the intended mode). New finding recorded for re-review if a production deployment scenario is added.
 
 ---
 
@@ -144,6 +152,8 @@ iteration: 3
   The 300 ms delay added by plan 10 increases exposure: it adds a window during which the document could be externally deleted (session TTL, another tab, B2's double-delete scenario above), making a 404 from `onDelete` more likely than before the delay was introduced.
 
 - **Fix direction:** Wrap the `await onDelete(doc.doc_id)` call in a try-catch inside `handleDeleteConfirm`. On error, reset `isDeleting` to `false` and surface the error (toast or inline message). This also recovers the card's opacity if the delete fails.
+
+**Resolution:** fixed (e47221b) — `onDelete` wrapped in try-catch inside `handleDeleteConfirm`; on error, `setIsDeleting(false)` resets the card opacity so the user can retry. Bundled with B2 commit since both touch `DocumentCard.tsx`.
 
 ---
 
