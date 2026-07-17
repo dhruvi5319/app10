@@ -72,3 +72,10 @@ Note: pytest was not on PATH initially (used `~/.local/bin/pytest`); backend dep
 - Tests: `pytest -x -q --tb=short` → pass (37 passed)
 - Fix attempts: 0/3
 - Note: LLM error toast wiring gap fixed — SSE error events now trigger both error bubble and toast
+
+## Phase gate (final regression — after code review fixes)
+
+- Build: `cd frontend && npm run build` → pass (314 modules, 0 errors)
+- Tests: `pytest -x -q --tb=short` → pass (37 passed)
+- Code review: clean (iteration 2) — BLOCKER B1 resolved (apiFetch FastAPI envelope fix), W1/W2/W3 resolved
+- boot_smoke: skipped (no .pivota/start-dev.sh)
