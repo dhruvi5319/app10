@@ -2,14 +2,14 @@
 pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-core-mvp-ui T11 — Integration & Wiring (phase complete)
-last_updated: "2026-07-17T17:22:23.759Z"
+status: completed
+stopped_at: Completed 02-09-PLAN.md — Fix VITE_API_BASE_URL for Vite proxy routing
+last_updated: "2026-07-17T20:17:57.506Z"
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 3
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 4
 ---
 
 # Project State
@@ -70,6 +70,7 @@ progress:
 - Flexible version ranges (>=) in requirements.txt for Python 3.14 system package compatibility
 - [Phase 02-core-mvp-ui]: ToastContext renders ToastContainer internally in ToastProvider, keeping App.tsx clean
 - [Phase 02-core-mvp-ui]: LLM errors fire both error bubble in MessageThread AND auto-dismiss toast via useToastContext
+- [Phase 02-core-mvp-ui]: VITE_API_BASE_URL left empty so apiFetch uses relative /api/... paths via Vite proxy rather than absolute URLs blocked as mixed-content/CORS
 
 ## Performance Metrics
 
@@ -77,9 +78,10 @@ progress:
 |-------|------|----------|-------|-------|
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 | 02-core-mvp-ui | T01-T11 | 180min | 11 | 34 |
+| Phase 02-core-mvp-ui P09 | 1min | 1 tasks | 2 files |
 
 ## Last Session
 
-- **Stopped At:** Completed 02-core-mvp-ui T11 — Integration & Wiring (phase complete)
+- **Stopped At:** Completed 02-09-PLAN.md — Fix VITE_API_BASE_URL for Vite proxy routing
 - **Resume From:** Phase 03 — Responsive polish or production deploy
 - **Timestamp:** 2026-07-17T20:10:00Z
