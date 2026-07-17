@@ -3,13 +3,13 @@ pivota_spec_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 02-09-PLAN.md — Fix VITE_API_BASE_URL for Vite proxy routing
-last_updated: "2026-07-17T20:17:57.506Z"
+stopped_at: "Completed 02-10-PLAN.md — Gap closure: SSE stage labels + DocumentCard fade-out animation"
+last_updated: "2026-07-17T20:22:21.981Z"
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 2
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -71,6 +71,8 @@ progress:
 - [Phase 02-core-mvp-ui]: ToastContext renders ToastContainer internally in ToastProvider, keeping App.tsx clean
 - [Phase 02-core-mvp-ui]: LLM errors fire both error bubble in MessageThread AND auto-dismiss toast via useToastContext
 - [Phase 02-core-mvp-ui]: VITE_API_BASE_URL left empty so apiFetch uses relative /api/... paths via Vite proxy rather than absolute URLs blocked as mixed-content/CORS
+- [Phase 02-core-mvp-ui]: onStageUpdate optional callback threads SSE stage events from useDocuments back to UploadZone.inFlightFiles without blocking uploadFile()
+- [Phase 02-core-mvp-ui]: isDeleting state flag + setTimeout(300ms) used for DocumentCard fade-out exit animation — no framer-motion or react-transition-group needed
 
 ## Performance Metrics
 
@@ -79,9 +81,10 @@ progress:
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 | 02-core-mvp-ui | T01-T11 | 180min | 11 | 34 |
 | Phase 02-core-mvp-ui P09 | 1min | 1 tasks | 2 files |
+| Phase 02-core-mvp-ui P10 | 2min | 2 tasks | 3 files |
 
 ## Last Session
 
-- **Stopped At:** Completed 02-09-PLAN.md — Fix VITE_API_BASE_URL for Vite proxy routing
+- **Stopped At:** Completed 02-10-PLAN.md — Gap closure: SSE stage labels + DocumentCard fade-out animation
 - **Resume From:** Phase 03 — Responsive polish or production deploy
 - **Timestamp:** 2026-07-17T20:10:00Z
