@@ -5,7 +5,7 @@ import FileProgressBar from './FileProgressBar';
 import type { DocumentStatus } from '@/types/api';
 
 interface UploadZoneProps {
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (file: File, onStageUpdate?: (status: DocumentStatus, progress_pct: number) => void) => Promise<void>;
   disabled?: boolean;
 }
 
@@ -88,7 +88,14 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
         setInFlightFiles((prev) => [...prev, entry]);
 
         try {
-          await onUpload(file);
+          await onUpload(file, (status, progress_pct) => {
+            // Update this file's stage in inFlightFiles so FileProgressBar reflects it
+            setInFlightFiles((prev) =>
+              prev.map((f) =>
+                f.id === fileId ? { ...f, status, progress_pct } : f,
+              ),
+            );
+          });
           // Mark as completed — remove from in-flight after brief delay
           setInFlightFiles((prev) =>
             prev.map((f) => (f.id === fileId ? { ...f, status: 'READY', progress_pct: 100 } : f)),
