@@ -101,7 +101,12 @@ export default function DocumentCard({ document: doc, onDelete }: DocumentCardPr
     setShowDeleteDialog(false);
     setIsDeleting(true);                          // start opacity fade
     await new Promise((resolve) => setTimeout(resolve, 300)); // wait for CSS transition
-    await onDelete(doc.doc_id);                   // now remove from parent state
+    try {
+      await onDelete(doc.doc_id);                 // now remove from parent state
+    } catch {
+      // Delete failed (e.g. 404 on double-delete, network error) — restore the card
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -180,13 +185,25 @@ export default function DocumentCard({ document: doc, onDelete }: DocumentCardPr
         <button
           className="btn-ghost"
           onClick={() => setShowDeleteDialog(true)}
-          disabled={isProcessing}
-          aria-label={isProcessing ? `Cannot delete ${doc.filename} while processing` : `Delete ${doc.filename}`}
-          title={isProcessing ? 'Cannot delete while processing' : `Delete ${doc.filename}`}
+          disabled={isProcessing || isDeleting}
+          aria-label={
+            isDeleting
+              ? `Deleting ${doc.filename}`
+              : isProcessing
+                ? `Cannot delete ${doc.filename} while processing`
+                : `Delete ${doc.filename}`
+          }
+          title={
+            isDeleting
+              ? 'Deleting…'
+              : isProcessing
+                ? 'Cannot delete while processing'
+                : `Delete ${doc.filename}`
+          }
           style={{
             padding: 6,
             borderRadius: 'var(--radius-sm)',
-            color: isProcessing
+            color: isProcessing || isDeleting
               ? 'var(--color-text-muted)'
               : 'var(--color-text-secondary)',
             flexShrink: 0,
