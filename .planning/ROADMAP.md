@@ -29,7 +29,7 @@ This roadmap transforms the RAG Chatbot PRD feature requirements (F0–F7) into 
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | 1. Foundation & RAG Pipeline | Complete ✓ | 2026-05-26 |
-| 2. Core MVP UI & Session | Gaps Found (2) | 2026-07-17 |
+| 2. Core MVP UI & Session | Gap Closure In Progress | 2026-07-17 |
 | 3. Polish & Developer Experience | Not started | — |
 
 ---
