@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 02-core-mvp-ui
-- **Current Task:** T04 (T03 complete)
-- **Next Task:** T04 — Document API Module & useDocuments Hook
+- **Current Task:** T05 (T04 complete)
+- **Next Task:** T05 — Upload Zone Component
 - **Status:** Phase 02 in progress
 
 ## Phase 02 Progress
@@ -12,9 +12,10 @@
 - [x] T01 — Project Scaffold & API Client (commit: bdc4b21)
 - [x] T02 — Session Hook & Initialisation (files in bdc4b21; verified build passes)
 - [x] T03 — Application Layout (pre-scaffolded in 0d5bff6; verified spec compliance + build passes)
+- [x] T04 — Document API Module & useDocuments Hook (pre-scaffolded in 0d5bff6; verified spec compliance + build passes)
 
 ### Pending Tasks
-- [ ] T04 — Document API Module & useDocuments Hook
+- [ ] T05 — Upload Zone Component
 - [ ] T05 — Upload Zone Component
 - [ ] T06 — Document Panel Component
 - [ ] T07 — Chat API Module & useChat Hook
@@ -61,6 +62,6 @@
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
 ## Last Session
-- **Stopped At:** Completed Phase 02 T03 — Application Layout (pre-scaffolded; verified spec + build passes)
-- **Resume From:** Phase 02 T04 — Document API Module & useDocuments Hook
-- **Timestamp:** 2026-07-17T17:10:00Z
+- **Stopped At:** Completed Phase 02 T04 — Document API Module & useDocuments Hook (pre-scaffolded; verified spec + build passes)
+- **Resume From:** Phase 02 T05 — Upload Zone Component
+- **Timestamp:** 2026-07-17T17:20:00Z
