@@ -94,11 +94,14 @@ function StatusBadge({ status }: { status: Document['status'] }) {
 
 export default function DocumentCard({ document: doc, onDelete }: DocumentCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isProcessing = PROCESSING_STATUSES.has(doc.status);
 
   const handleDeleteConfirm = async () => {
-    await onDelete(doc.doc_id);
     setShowDeleteDialog(false);
+    setIsDeleting(true);                          // start opacity fade
+    await new Promise((resolve) => setTimeout(resolve, 300)); // wait for CSS transition
+    await onDelete(doc.doc_id);                   // now remove from parent state
   };
 
   return (
@@ -112,6 +115,7 @@ export default function DocumentCard({ document: doc, onDelete }: DocumentCardPr
           padding: '10px 12px',
           marginBottom: 6,
           transition: 'opacity 0.3s ease',
+          opacity: isDeleting ? 0 : 1,            // drives the exit animation
         }}
       >
         <FileTypeIcon type={doc.file_type} />
