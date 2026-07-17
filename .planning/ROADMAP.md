@@ -19,7 +19,7 @@ This roadmap transforms the RAG Chatbot PRD feature requirements (F0–F7) into 
 ## Phases
 
 - [x] **Phase 1: Foundation & RAG Pipeline** — Backend scaffolding, document ingestion pipeline, embedding, vector store, and the full backend RAG engine. No UI yet — verified via API only.
-- [ ] **Phase 2: Core MVP UI & Session** — React frontend wiring all P0 and P1 features: upload UI, chat Q&A with citations, document management panel, chat history, and error handling.
+- [x] **Phase 2: Core MVP UI & Session** — React frontend wiring all P0 and P1 features: upload UI, chat Q&A with citations, document management panel, chat history, and error handling.
 - [ ] **Phase 3: Polish & Developer Experience** — Responsive layout for mobile/tablet, accessibility (WCAG AA), and configurable RAG pipeline settings via `.env`.
 
 ---
@@ -29,7 +29,7 @@ This roadmap transforms the RAG Chatbot PRD feature requirements (F0–F7) into 
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | 1. Foundation & RAG Pipeline | Complete ✓ | 2026-05-26 |
-| 2. Core MVP UI & Session | Not started | — |
+| 2. Core MVP UI & Session | Gaps Found (2) | 2026-07-17 |
 | 3. Polish & Developer Experience | Not started | — |
 
 ---
