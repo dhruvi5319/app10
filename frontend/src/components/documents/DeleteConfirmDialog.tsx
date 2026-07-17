@@ -48,7 +48,6 @@ export default function DeleteConfirmDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget && !isDeleting) onCancel();
       }}
-      aria-hidden="true"
     >
       <div
         ref={dialogRef}
