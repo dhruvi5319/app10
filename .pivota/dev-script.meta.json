@@ -1,0 +1,23 @@
+{
+  "generator_version": "init-dev-server@1",
+  "catalog_entry": null,
+  "generated_at": "2026-07-17T19:52:08Z",
+  "inspection_inputs_hash": "b62fe78403b8b96ab66ad7a1386c49cb308c043904e21e9b688b3c8e65511f1c",
+  "inspection_inputs": {
+    "matched_globs": [
+      "backend/pyproject.toml",
+      "backend/requirements.txt",
+      "frontend/package.json",
+      "frontend/vite.config.ts"
+    ],
+    "manifest_signatures": [
+      "backend/pyproject.toml:dep:fastapi",
+      "backend/requirements.txt:dep:fastapi>=0.111.0",
+      "backend/requirements.txt:dep:uvicorn[standard]>=0.29.0",
+      "frontend/package.json:dep:react@^18.3.1",
+      "frontend/package.json:dep:vite@^5.2.11",
+      "frontend/package.json:dev-script:vite"
+    ],
+    "existing_scripts": []
+  }
+}
