@@ -161,6 +161,11 @@ This roadmap transforms the RAG Chatbot PRD feature requirements (F0–F7) into 
 ---
 
 **Status**: In Progress
+
+**Plans:**
+- [ ] 02-09-PLAN.md — Fix VITE_API_BASE_URL env (session init UAT gap)
+- [ ] 02-10-PLAN.md — Wire SSE stage labels to FileProgressBar + delete fade-out animation (VERIFICATION.md Truths #1 and #5)
+
 ### Phase 3: Polish & Developer Experience
 
 **Goal:** The application is production-quality: it works correctly on mobile and tablet viewports, meets WCAG AA accessibility standards, and is fully configurable by a developer via `.env` without touching application code. Jordan (technical evaluator) can tune every pipeline parameter and the product is usable by Maya on her phone or tablet.
