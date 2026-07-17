@@ -45,7 +45,10 @@ function createOptimisticDoc(
   };
 }
 
-export function useDocuments(sessionId: string): {
+export function useDocuments(
+  sessionId: string,
+  onNetworkError?: () => void,
+): {
   documents: Document[];
   totalSizeBytes: number;
   uploadFile: (file: File) => Promise<void>;
@@ -61,10 +64,17 @@ export function useDocuments(sessionId: string): {
 
   /** Fetch the full document list from the server */
   const refreshDocuments = useCallback(async () => {
-    const response = await listDocuments(sessionId);
-    setDocuments(response.documents);
-    setTotalSizeBytes(response.total_size_bytes);
-  }, [sessionId]);
+    try {
+      const response = await listDocuments(sessionId);
+      setDocuments(response.documents);
+      setTotalSizeBytes(response.total_size_bytes);
+    } catch (err) {
+      if (err instanceof ApiError && err.errorCode === 'NETWORK_ERROR') {
+        onNetworkError?.();
+      }
+      throw err;
+    }
+  }, [sessionId, onNetworkError]);
 
   // Load documents on mount
   useEffect(() => {
@@ -192,7 +202,15 @@ export function useDocuments(sessionId: string): {
       }
 
       // Upload and get doc_id
-      const result = await uploadDocument(sessionId, file);
+      let result: { doc_id: string; filename: string; status: string };
+      try {
+        result = await uploadDocument(sessionId, file);
+      } catch (err) {
+        if (err instanceof ApiError && err.errorCode === 'NETWORK_ERROR') {
+          onNetworkError?.();
+        }
+        throw err;
+      }
       const docId = result.doc_id;
 
       // Add optimistic entry to state
@@ -204,13 +222,20 @@ export function useDocuments(sessionId: string): {
       startSSETracking(docId);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessionId, updateDocumentStatus],
+    [sessionId, updateDocumentStatus, onNetworkError],
   );
 
   /** Delete a document */
   const deleteDocument = useCallback(
     async (docId: string) => {
-      await deleteDocumentApi(docId);
+      try {
+        await deleteDocumentApi(docId);
+      } catch (err) {
+        if (err instanceof ApiError && err.errorCode === 'NETWORK_ERROR') {
+          onNetworkError?.();
+        }
+        throw err;
+      }
 
       // Remove from state on success
       setDocuments((prev) => {
@@ -235,7 +260,7 @@ export function useDocuments(sessionId: string): {
         activePolls.current.delete(docId);
       }
     },
-    [],
+    [onNetworkError],
   );
 
   return {

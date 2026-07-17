@@ -10,6 +10,8 @@ interface DocumentPanelProps {
   onHasReadyDocumentChange?: (hasReady: boolean) => void;
   /** Called when user swipes/drags drawer down on mobile to close */
   onDrawerClose?: () => void;
+  /** Called when a network error is detected during any document API call */
+  onNetworkError?: () => void;
 }
 
 const COLLAPSED_STORAGE_KEY = 'doc_panel_collapsed';
@@ -58,9 +60,10 @@ export default function DocumentPanel({
   sessionId,
   onHasReadyDocumentChange,
   onDrawerClose,
+  onNetworkError,
 }: DocumentPanelProps) {
   const { documents, totalSizeBytes, uploadFile, deleteDocument } =
-    useDocuments(sessionId);
+    useDocuments(sessionId, onNetworkError);
 
   const [collapsed, setCollapsed] = useState(() => {
     try {

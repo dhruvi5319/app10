@@ -35,6 +35,7 @@ function createAssistantPlaceholder(sessionId: string): Message {
 export function useChat(
   sessionId: string,
   _hasReadyDocument: boolean,
+  onNetworkError?: () => void,
 ): {
   messages: Message[];
   streamingContent: string;
@@ -98,6 +99,9 @@ export function useChat(
         const response = await sendQuery(sessionId, query);
         messageId = response.message_id;
       } catch (err) {
+        if (err instanceof ApiError && err.errorCode === 'NETWORK_ERROR') {
+          onNetworkError?.();
+        }
         const errorText =
           err instanceof ApiError
             ? err.message
@@ -199,14 +203,21 @@ export function useChat(
         placeholderIdRef.current = null;
       };
     },
-    [sessionId, queryInFlight],
+    [sessionId, queryInFlight, onNetworkError],
   );
 
   const clearMessages = useCallback(async () => {
-    await clearHistory(sessionId);
+    try {
+      await clearHistory(sessionId);
+    } catch (err) {
+      if (err instanceof ApiError && err.errorCode === 'NETWORK_ERROR') {
+        onNetworkError?.();
+      }
+      throw err;
+    }
     setMessages([]);
     setStreamingContent('');
-  }, [sessionId]);
+  }, [sessionId, onNetworkError]);
 
   return {
     messages,

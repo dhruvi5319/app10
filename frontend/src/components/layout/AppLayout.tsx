@@ -4,6 +4,7 @@ import ChatPanel from '@/components/chat/ChatPanel';
 
 interface AppLayoutProps {
   sessionId: string;
+  onNetworkError?: () => void;
 }
 
 const TABLET_EXPANDED_KEY = 'doc_panel_tablet_expanded';
@@ -72,7 +73,7 @@ function ChevronLeftIcon() {
  * Mobile (< 600px): doc panel hidden; FAB opens as bottom drawer with
  *   drag-to-dismiss (swipe down > 100px) and backdrop tap to close.
  */
-export default function AppLayout({ sessionId }: AppLayoutProps) {
+export default function AppLayout({ sessionId, onNetworkError }: AppLayoutProps) {
   const [hasReadyDocument, setHasReadyDocument] = useState(false);
 
   // Tablet: panel expanded toggle (persisted)
@@ -192,6 +193,7 @@ export default function AppLayout({ sessionId }: AppLayoutProps) {
             sessionId={sessionId}
             onHasReadyDocumentChange={handleHasReadyDocumentChange}
             onDrawerClose={closeDrawer}
+            onNetworkError={onNetworkError}
           />
         </div>
       </aside>
@@ -211,6 +213,7 @@ export default function AppLayout({ sessionId }: AppLayoutProps) {
         <ChatPanel
           sessionId={sessionId}
           hasReadyDocument={hasReadyDocument}
+          onNetworkError={onNetworkError}
         />
       </main>
 

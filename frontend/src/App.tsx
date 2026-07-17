@@ -74,14 +74,15 @@ function AppInner() {
   const { sessionId, loading, error } = useSession();
   const [networkError, setNetworkError] = useState(false);
 
-  const handleRetry = useCallback(() => {
-    // Simply reload the page to retry all pending operations
-    window.location.reload();
+  const handleNetworkError = useCallback(() => {
+    setNetworkError(true);
   }, []);
 
-  // Expose network error setter globally for hooks to call
-  // (In a full implementation hooks would use a context; this is the minimal wiring)
-  void setNetworkError; // used via closure passed to children if needed
+  const handleRetry = useCallback(() => {
+    // Clear the banner and reload to retry all pending operations
+    setNetworkError(false);
+    window.location.reload();
+  }, []);
 
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen />;
@@ -99,7 +100,7 @@ function AppInner() {
         Skip to main content
       </a>
       <NetworkBanner visible={networkError} onRetry={handleRetry} />
-      <AppLayout sessionId={sessionId} />
+      <AppLayout sessionId={sessionId} onNetworkError={handleNetworkError} />
     </>
   );
 }

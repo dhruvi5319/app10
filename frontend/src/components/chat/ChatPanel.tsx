@@ -7,14 +7,17 @@ import ClearChatDialog from './ClearChatDialog';
 interface ChatPanelProps {
   sessionId: string;
   hasReadyDocument: boolean;
+  /** Called when a network error is detected during any chat API call */
+  onNetworkError?: () => void;
 }
 
 export default function ChatPanel({
   sessionId,
   hasReadyDocument,
+  onNetworkError,
 }: ChatPanelProps) {
   const { messages, streamingContent, queryInFlight, sendMessage, clearMessages } =
-    useChat(sessionId, hasReadyDocument);
+    useChat(sessionId, hasReadyDocument, onNetworkError);
 
   const [showClearDialog, setShowClearDialog] = useState(false);
 
