@@ -21,6 +21,10 @@ waves:
     build: pass
     tests: pass
     fix_attempts: 0
+  - wave: 6
+    build: pass
+    tests: pass
+    fix_attempts: 0
 ---
 
 ## Wave 2
@@ -50,3 +54,10 @@ Note: pytest was not on PATH initially (used `~/.local/bin/pytest`); backend dep
 - Tests: `pytest -x -q --tb=short` → pass (37 passed)
 - Fix attempts: 0/3
 - Note: Bug fixed in MessageBubble — error retry now uses prior user message, not error content
+
+## Wave 6
+
+- Build: `cd frontend && npm run build` → pass
+- Tests: `pytest -x -q --tb=short` → pass (37 passed)
+- Fix attempts: 0/3
+- Note: 3 integration gaps fixed: missing slideInRight keyframe, NETWORK_ERROR not wired to hooks, onNetworkError callback not propagated through App.tsx → AppLayout → hooks
