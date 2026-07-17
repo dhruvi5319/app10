@@ -1,12 +1,29 @@
 # Project State
 
 ## Current Position
-- **Phase:** 01-foundation-rag-pipeline
-- **Current Task:** COMPLETE
-- **Next Task:** Phase 2 (TBD)
-- **Status:** Phase 01 complete
+- **Phase:** 02-core-mvp-ui
+- **Current Task:** T02 (T01 complete)
+- **Next Task:** T02 — Session Hook & Initialisation
+- **Status:** Phase 02 in progress
 
-## Phase 01 Progress
+## Phase 02 Progress
+
+### Completed Tasks
+- [x] T01 — Project Scaffold & API Client (commit: bdc4b21)
+
+### Pending Tasks
+- [ ] T02 — Session Hook & Initialisation
+- [ ] T03 — Application Layout
+- [ ] T04 — Document API Module & useDocuments Hook
+- [ ] T05 — Upload Zone Component
+- [ ] T06 — Document Panel Component
+- [ ] T07 — Chat API Module & useChat Hook
+- [ ] T08 — Chat Interface Components
+- [ ] T09 — Citation Components
+- [ ] T10 — Feedback Components
+- [ ] T11 — Integration & Wiring
+
+## Phase 01 Progress (Complete)
 
 ### Completed Tasks
 - [x] T01 — Project Scaffold & Configuration (commit: 5c635f3)
@@ -44,6 +61,6 @@
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
 ## Last Session
-- **Stopped At:** Completed Phase 01 — all 12 tasks done (T12 commit: f99021a)
-- **Resume From:** Phase 02 (TBD)
-- **Timestamp:** 2026-05-26T15:22:07Z
+- **Stopped At:** Completed Phase 02 T01 — Project Scaffold & API Client (commit: bdc4b21)
+- **Resume From:** Phase 02 T02 — Session Hook & Initialisation
+- **Timestamp:** 2026-07-17T00:00:00Z
