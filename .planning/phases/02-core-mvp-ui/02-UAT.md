@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-core-mvp-ui
 source: [SUMMARY.md, 02-02-SUMMARY.md, 02-08-SUMMARY.md]
 started: 2026-07-17T19:57:50Z
-updated: 2026-07-17T20:05:00Z
+updated: 2026-07-17T20:08:00Z
 ---
 
 ## Current Test
@@ -108,7 +108,15 @@ per_test:
   severity: blocker
   test: 1
   source: user
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "VITE_API_BASE_URL=http://localhost:8000 in frontend/.env causes apiFetch to build absolute URLs (e.g. http://localhost:8000/api/sessions). When the preview proxy serves the app over HTTPS from a non-localhost host, the browser blocks the fetch as mixed content (HTTPS page → HTTP target) and cross-origin. The Vite dev-server proxy (/api → http://localhost:8000 in vite.config.ts) is bypassed entirely. Fix: set VITE_API_BASE_URL to empty string so apiFetch uses relative /api paths that route through the Vite proxy."
+  artifacts:
+    - path: "frontend/.env.example"
+      issue: "VITE_API_BASE_URL=http://localhost:8000 — should be empty so Vite proxy is used"
+    - path: "frontend/src/api/client.ts:1"
+      issue: "const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '' — correctly falls back to empty when env var is empty"
+    - path: "frontend/vite.config.ts"
+      issue: "Proxy /api → http://localhost:8000 is correct but bypassed when BASE_URL is set to the absolute backend URL"
+  missing:
+    - "Set VITE_API_BASE_URL= (empty) in frontend/.env.example so Vite proxy handles /api routing"
+    - "Remove or update frontend/.env to also have VITE_API_BASE_URL= (empty)"
   debug_session: ""
