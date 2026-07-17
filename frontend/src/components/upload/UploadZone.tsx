@@ -103,16 +103,18 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
               : err instanceof Error
                 ? err.message
                 : 'Upload failed.';
+          // Show the error inside the FileProgressBar (which already includes a Retry
+          // button). Do NOT also call addError — that would display the same message
+          // twice (once in FileProgressBar, once in the inline errors list).
           setInFlightFiles((prev) =>
             prev.map((f) =>
               f.id === fileId ? { ...f, status: 'FAILED', error_message: message } : f,
             ),
           );
-          addError(fileId, message);
         }
       }
     },
-    [onUpload, validateFile, addError],
+    [onUpload, validateFile],
   );
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
