@@ -13,6 +13,7 @@ import {
   ALLOWED_EXTENSIONS,
   POLLING_INTERVAL_MS,
 } from '@/utils/constants';
+import type { UploadProgressCallback } from '@/components/upload/UploadZone';
 
 /** Terminal document statuses — no more transitions expected */
 const TERMINAL_STATUSES: DocumentStatus[] = ['READY', 'FAILED'];
@@ -48,7 +49,7 @@ function createOptimisticDoc(
 export function useDocuments(sessionId: string): {
   documents: Document[];
   totalSizeBytes: number;
-  uploadFile: (file: File) => Promise<void>;
+  uploadFile: (file: File, onProgress?: UploadProgressCallback) => Promise<void>;
   deleteDocument: (docId: string) => Promise<void>;
   refreshDocuments: () => Promise<void>;
 } {
@@ -92,7 +93,7 @@ export function useDocuments(sessionId: string): {
   );
 
   /** Start polling for document status as fallback when SSE is unavailable */
-  function startPolling(docId: string) {
+  function startPolling(docId: string, onProgress?: UploadProgressCallback) {
     if (activePolls.current.has(docId)) return;
 
     const intervalId = setInterval(async () => {
@@ -105,6 +106,7 @@ export function useDocuments(sessionId: string): {
           error_message: doc.error_message,
           ready_at: doc.ready_at,
         });
+        onProgress?.(doc.status, doc.status === 'READY' ? 100 : 50);
 
         if (TERMINAL_STATUSES.includes(doc.status)) {
           clearInterval(intervalId);
@@ -119,13 +121,13 @@ export function useDocuments(sessionId: string): {
   }
 
   /** Track progress via SSE stream */
-  function startSSETracking(docId: string) {
+  function startSSETracking(docId: string, onProgress?: UploadProgressCallback) {
     let stream: EventSource;
     try {
       stream = openUploadStream(docId);
     } catch {
       // SSE not available — fall back to polling
-      startPolling(docId);
+      startPolling(docId, onProgress);
       return;
     }
 
@@ -137,6 +139,8 @@ export function useDocuments(sessionId: string): {
         updateDocumentStatus(docId, {
           status: data.status,
         });
+        // Forward stage + progress to UploadZone progress bar
+        onProgress?.(data.status, data.progress_pct ?? 0);
 
         if (TERMINAL_STATUSES.includes(data.status)) {
           stream.close();
@@ -152,6 +156,7 @@ export function useDocuments(sessionId: string): {
                 error_message: doc.error_message,
                 ready_at: doc.ready_at,
               });
+              onProgress?.(doc.status, doc.status === 'READY' ? 100 : 0);
             })
             .catch(() => {
               // Ignore — state will be close enough
@@ -166,13 +171,13 @@ export function useDocuments(sessionId: string): {
       stream.close();
       activeStreams.current.delete(docId);
       // Fall back to polling
-      startPolling(docId);
+      startPolling(docId, onProgress);
     };
   }
 
   /** Validate and upload a file */
   const uploadFile = useCallback(
-    async (file: File) => {
+    async (file: File, onProgress?: UploadProgressCallback) => {
       // Client-side validation
       if (file.size > MAX_FILE_SIZE_BYTES) {
         throw new ApiError(
@@ -200,8 +205,8 @@ export function useDocuments(sessionId: string): {
       setDocuments((prev) => [...prev, optimisticDoc]);
       setTotalSizeBytes((prev) => prev + file.size);
 
-      // Track progress via SSE (with polling fallback)
-      startSSETracking(docId);
+      // Track progress via SSE (with polling fallback); forward events to onProgress
+      startSSETracking(docId, onProgress);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [sessionId, updateDocumentStatus],

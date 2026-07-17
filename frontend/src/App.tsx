@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { ToastProvider } from '@/context/ToastContext';
 import NetworkBanner from '@/components/feedback/NetworkBanner';
@@ -72,16 +72,23 @@ function ErrorScreen() {
 
 function AppInner() {
   const { sessionId, loading, error } = useSession();
-  const [networkError, setNetworkError] = useState(false);
+  const [networkError, setNetworkError] = useState(!navigator.onLine);
 
   const handleRetry = useCallback(() => {
-    // Simply reload the page to retry all pending operations
     window.location.reload();
   }, []);
 
-  // Expose network error setter globally for hooks to call
-  // (In a full implementation hooks would use a context; this is the minimal wiring)
-  void setNetworkError; // used via closure passed to children if needed
+  // Wire browser online/offline events to show/hide the NetworkBanner
+  useEffect(() => {
+    const handleOffline = () => setNetworkError(true);
+    const handleOnline = () => setNetworkError(false);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
 
   if (loading) return <LoadingScreen />;
   if (error) return <ErrorScreen />;

@@ -100,12 +100,19 @@ export default function MessageThread({
         </div>
       ) : (
         <>
-          {messages.map((msg) => {
+          {messages.map((msg, idx) => {
             const isStreamingThis =
               queryInFlight &&
               msg.role === 'assistant' &&
               msg.message_id === streamingMessageId &&
               streamingContent !== '';
+
+            // For error bubbles, find the preceding user message to retry with
+            // the original query — not the __ERROR__ sentinel stored in content
+            const retryQuery =
+              onRetry && msg.role === 'assistant'
+                ? [...messages].slice(0, idx).reverse().find((m) => m.role === 'user')?.content
+                : undefined;
 
             return (
               <MessageBubble
@@ -113,7 +120,7 @@ export default function MessageThread({
                 message={msg}
                 isStreaming={isStreamingThis}
                 streamingContent={isStreamingThis ? streamingContent : undefined}
-                onRetry={onRetry}
+                onRetry={retryQuery !== undefined ? () => onRetry!(retryQuery) : undefined}
               />
             );
           })}

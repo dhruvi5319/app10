@@ -4,8 +4,10 @@ import { ApiError } from '@/api/client';
 import FileProgressBar from './FileProgressBar';
 import type { DocumentStatus } from '@/types/api';
 
+export type UploadProgressCallback = (status: DocumentStatus, progress_pct: number) => void;
+
 interface UploadZoneProps {
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (file: File, onProgress: UploadProgressCallback) => Promise<void>;
   disabled?: boolean;
 }
 
@@ -87,8 +89,15 @@ export default function UploadZone({ onUpload, disabled = false }: UploadZonePro
         };
         setInFlightFiles((prev) => [...prev, entry]);
 
+        // Progress callback forwarded from useDocuments SSE tracking
+        const onProgress: UploadProgressCallback = (status, progress_pct) => {
+          setInFlightFiles((prev) =>
+            prev.map((f) => (f.id === fileId ? { ...f, status, progress_pct } : f)),
+          );
+        };
+
         try {
-          await onUpload(file);
+          await onUpload(file, onProgress);
           // Mark as completed — remove from in-flight after brief delay
           setInFlightFiles((prev) =>
             prev.map((f) => (f.id === fileId ? { ...f, status: 'READY', progress_pct: 100 } : f)),
