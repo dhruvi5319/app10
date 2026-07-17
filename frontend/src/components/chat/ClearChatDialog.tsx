@@ -45,7 +45,6 @@ export default function ClearChatDialog({
       onClick={(e) => {
         if (e.target === e.currentTarget && !isClearing) onCancel();
       }}
-      aria-hidden="true"
     >
       <div
         ref={dialogRef}

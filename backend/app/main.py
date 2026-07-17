@@ -5,10 +5,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.config import get_settings, log_startup_config
+from app.config import get_settings, log_startup_config, _validate_settings_at_startup
 from app.database import init_db
 from app.models.errors import ErrorResponse
 from app.routers import chat, documents, sessions
+
+# Validate settings at import time — exits with CRITICAL log if config is invalid
+_validate_settings_at_startup()
 
 
 @asynccontextmanager
