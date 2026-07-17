@@ -120,3 +120,6 @@ opencode.json.bak
 AGENTS.md
 .opencode.session
 # <<< pivota:gitignore-managed
+.nuxt/
+.vite/
+.turbo/
