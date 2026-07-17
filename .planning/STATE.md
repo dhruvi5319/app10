@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 02-core-mvp-ui
-- **Current Task:** T05 (T04 complete)
-- **Next Task:** T05 — Upload Zone Component
+- **Current Task:** T06 (T05 complete)
+- **Next Task:** T06 — Document Panel Component
 - **Status:** Phase 02 in progress
 
 ## Phase 02 Progress
@@ -13,10 +13,9 @@
 - [x] T02 — Session Hook & Initialisation (files in bdc4b21; verified build passes)
 - [x] T03 — Application Layout (pre-scaffolded in 0d5bff6; verified spec compliance + build passes)
 - [x] T04 — Document API Module & useDocuments Hook (pre-scaffolded in 0d5bff6; verified spec compliance + build passes)
+- [x] T05 — Upload Zone Component (commit: 30c06e6; build passes 0 errors)
 
 ### Pending Tasks
-- [ ] T05 — Upload Zone Component
-- [ ] T05 — Upload Zone Component
 - [ ] T06 — Document Panel Component
 - [ ] T07 — Chat API Module & useChat Hook
 - [ ] T08 — Chat Interface Components
@@ -62,6 +61,6 @@
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
 ## Last Session
-- **Stopped At:** Completed Phase 02 T04 — Document API Module & useDocuments Hook (pre-scaffolded; verified spec + build passes)
-- **Resume From:** Phase 02 T05 — Upload Zone Component
-- **Timestamp:** 2026-07-17T17:20:00Z
+- **Stopped At:** Completed Phase 02 T05 — Upload Zone Component (commit: 30c06e6; build passes 0 errors)
+- **Resume From:** Phase 02 T06 — Document Panel Component
+- **Timestamp:** 2026-07-17T17:40:00Z
