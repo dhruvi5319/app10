@@ -110,6 +110,8 @@ iteration: 1
   emits `ErrorResponse` fields at the top level (matching what the frontend already
   expects). Either side can fix it, but the frontend fix is the smallest change.
 
+**Resolution:** fixed (b76deb2) — unwraps `body.detail` when it is an object (HTTPException path) before extracting `error_code`/`message`; falls back to `body` itself for the generic Exception handler path. `tsc --noEmit` clean; `npm run build` 0 errors; 37 backend tests pass.
+
 ---
 
 ## WARNINGs
@@ -128,6 +130,8 @@ iteration: 1
 
 - **Fix direction:** Remove the skip-link from `App.tsx` (or from `AppLayout.tsx`)
   so only one exists per page.
+
+**Resolution:** fixed (d1892e2) — removed the duplicate skip-link block (lines 139–147) from `AppLayout.tsx`; the authoritative skip-link in `App.tsx` (first DOM element before `AppLayout`) remains. `tsc --noEmit` clean.
 
 ---
 
@@ -149,6 +153,8 @@ iteration: 1
 - **Fix direction:** Remove `aria-hidden="true"` from the overlay `div`. If the intent
   was to hide the backdrop ornament itself, apply it only to an empty decoration
   element, not the outer wrapper that contains the dialog.
+
+**Resolution:** fixed (e90e797) — removed `aria-hidden="true"` from the `.modal-overlay` div in both `ClearChatDialog.tsx` and `DeleteConfirmDialog.tsx`; the inner `role="dialog" aria-modal="true" aria-labelledby="..."` elements are now fully reachable by assistive technology. `tsc --noEmit` clean.
 
 ---
 
@@ -174,6 +180,8 @@ iteration: 1
 - **Fix direction:** On upload failure, either populate `inFlightFiles` with FAILED
   state (showing the error inside `FileProgressBar`) **or** call `addError`, but not
   both. Whichever path is dropped, ensure a retry mechanism remains available.
+
+**Resolution:** fixed (b3d3099) — removed the `addError(fileId, message)` call in the `catch` block; upload failures now only set `status:'FAILED'` + `error_message` on the `inFlightFiles` entry, which `FileProgressBar` renders with the Retry button. Client-side validation errors (no `FileProgressBar` entry) continue to use `addError` as before. Also removed `addError` from the `processFiles` `useCallback` dependency array. `tsc --noEmit` clean; `npm run build` 0 errors.
 
 ---
 
