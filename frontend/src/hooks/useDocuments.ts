@@ -116,10 +116,10 @@ export function useDocuments(
           ready_at: doc.ready_at,
         });
 
-        // Notify UploadZone of each stage so FileProgressBar can display it
-        if (!TERMINAL_STATUSES.includes(doc.status)) {
-          onStageUpdate?.(doc.status, 0);
-        }
+        // Notify UploadZone of each stage so FileProgressBar can display it.
+        // Always call onStageUpdate (including terminal READY/FAILED) to mirror
+        // the SSE path — the READY signal is the sole trigger for inFlightFiles removal.
+        onStageUpdate?.(doc.status, 0);
 
         if (TERMINAL_STATUSES.includes(doc.status)) {
           clearInterval(intervalId);
