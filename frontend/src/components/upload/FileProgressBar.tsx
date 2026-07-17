@@ -9,6 +9,7 @@ interface FileProgressBarProps {
   onRetry?: () => void;
 }
 
+// EMBEDDING label is overridden below with live progress_pct: "Embedding (N%)…"
 const STAGE_LABELS: Record<DocumentStatus, string> = {
   UPLOADING: 'Uploading…',
   PARSING: 'Parsing…',
