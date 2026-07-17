@@ -2,17 +2,17 @@
 
 ## Current Position
 - **Phase:** 02-core-mvp-ui
-- **Current Task:** T02 (T01 complete)
-- **Next Task:** T02 — Session Hook & Initialisation
+- **Current Task:** T03 (T02 complete)
+- **Next Task:** T03 — Application Layout
 - **Status:** Phase 02 in progress
 
 ## Phase 02 Progress
 
 ### Completed Tasks
 - [x] T01 — Project Scaffold & API Client (commit: bdc4b21)
+- [x] T02 — Session Hook & Initialisation (files in bdc4b21; verified build passes)
 
 ### Pending Tasks
-- [ ] T02 — Session Hook & Initialisation
 - [ ] T03 — Application Layout
 - [ ] T04 — Document API Module & useDocuments Hook
 - [ ] T05 — Upload Zone Component
@@ -61,6 +61,6 @@
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
 ## Last Session
-- **Stopped At:** Completed Phase 02 T01 — Project Scaffold & API Client (commit: bdc4b21)
-- **Resume From:** Phase 02 T02 — Session Hook & Initialisation
-- **Timestamp:** 2026-07-17T00:00:00Z
+- **Stopped At:** Completed Phase 02 T02 — Session Hook & Initialisation (verified build passes)
+- **Resume From:** Phase 02 T03 — Application Layout
+- **Timestamp:** 2026-07-17T17:00:00Z
