@@ -1,8 +1,8 @@
 ---
 phase: 2
-status: issues_found
-blockers: 1
-warnings: 3
+status: clean
+blockers: 0
+warnings: 0
 files_reviewed: 34
 files_reviewed_list:
   - frontend/src/api/client.ts
@@ -39,13 +39,116 @@ files_reviewed_list:
   - frontend/src/styles/globals.css
   - frontend/src/main.tsx
   - backend/app/routers/sessions.py   # read to verify error shape (cross-file seam)
-reviewed_at: 2026-07-17T17:30:35Z
-iteration: 1
+reviewed_at: 2026-07-17T17:50:00Z
+iteration: 2
 ---
 
 # Phase 2 Code Review
 
+## Iteration 2 — Re-review Summary
+
+All four findings from iteration 1 (B1, W1, W2, W3) are **confirmed fixed**. No
+regressions introduced by the fixes. No new BLOCKERs or WARNINGs found.
+
+### B1 — RESOLVED ✓
+**Fix commit:** b76deb2
+
+**Verification:**  
+`frontend/src/api/client.ts` line 59 now reads:
+```ts
+const payload = body?.detail && typeof body.detail === 'object' ? body.detail : body;
+errorCode    = payload.error_code ?? errorCode;
+errorMessage = payload.message ?? errorMessage;
+```
+- The `typeof body.detail === 'object'` guard correctly handles: FastAPI HTTPException
+  (detail is dict → unwrap), pydantic validation errors (detail is array → falls back to
+  `body`, yields `UNKNOWN_ERROR` which is acceptable since those are programmer errors, not
+  user-facing), and plain string details (falls back to `body`).
+- The null-body edge case (`response.json()` returns null → `payload.error_code` throws)
+  is caught by the surrounding `try/catch` that falls back to the HTTP status-line default
+  — same behavior as before, no regression.
+- `tsc --noEmit` passes with zero errors.
+
+### W1 — RESOLVED ✓
+**Fix commit:** d1892e2
+
+**Verification:**  
+`frontend/src/App.tsx` retains the single `.skip-link` anchor (lines 94–101). A grep for
+`skip-link` across `App.tsx` and `AppLayout.tsx` confirms it appears only in `App.tsx` —
+the duplicate block that was previously at `AppLayout.tsx:140–147` is gone. The skip-link
+is now the first focusable element in DOM order, before `AppLayout`.
+
+### W2 — RESOLVED ✓
+**Fix commit:** e90e797
+
+**Verification:**  
+Both dialog overlay `div` elements no longer carry `aria-hidden`. Confirmed by grep
+returning zero matches for `aria-hidden` in `ClearChatDialog.tsx` and
+`DeleteConfirmDialog.tsx`. The `aria-hidden="true"` that remains in `AppLayout.tsx` (line
+144) is on the `.drawer-backdrop` — a purely visual overlay with no interactive or
+semantic content — which is the correct and intended use of `aria-hidden`.
+
+### W3 — RESOLVED ✓
+**Fix commit:** b3d3099
+
+**Verification:**  
+`UploadZone.tsx` `catch` block (lines 99–113) no longer calls `addError`. Only
+`setInFlightFiles` with `status:'FAILED'` and `error_message` is called. The `addError`
+function is still referenced at line 77 for client-side validation failures (no
+`FileProgressBar` entry in that path), so the `addError` definition and its use in the
+validation branch remain correct. The `processFiles` `useCallback` dependency array no
+longer lists `addError` (line 117).
+
+---
+
+## Fresh-scan for new issues (iteration 2)
+
+Files touched by fix commits: `frontend/src/api/client.ts`, `frontend/src/App.tsx`,
+`frontend/src/components/layout/AppLayout.tsx`, `frontend/src/components/chat/ClearChatDialog.tsx`,
+`frontend/src/components/documents/DeleteConfirmDialog.tsx`,
+`frontend/src/components/upload/UploadZone.tsx`, `frontend/src/components/chat/ChatPanel.tsx`,
+`frontend/src/components/chat/MessageThread.tsx`, `frontend/src/components/chat/MessageBubble.tsx`,
+`frontend/src/hooks/useChat.ts`, `frontend/src/hooks/useDocuments.ts`,
+`frontend/src/styles/globals.css`.
+
+All were read in full. No new BLOCKERs or WARNINGs found. Notable items examined and
+cleared:
+
+- **`onLlmError` called twice on SSE `error` event:** The SSE `error` branch at
+  `useChat.ts:168–188` calls `onLlmError(data.message)` and also sets the error bubble.
+  `ChatPanel` passes `handleLlmError` as `onLlmError`, which calls `addToast`. The
+  toast and the in-thread error bubble are distinct UI surfaces (one transient, one
+  permanent), so dual notification is intentional and correct.
+
+- **`MessageBubble.onRetry` signature change:** The prop changed from
+  `(query: string) => void` to `() => void`; `MessageThread` now pre-binds the prior
+  user query before passing it down. Call site at `MessageThread:127–129` correctly
+  wraps `onRetry(priorUserQuery)` in a closure. No drift detected.
+
+- **`processFiles` stale-closure risk after removing `addError` from deps:** `addError`
+  is a `useCallback` with an empty dep array — it is stable across renders. Removing it
+  from the `processFiles` dep array is safe and correct.
+
+- **`btn-secondary` CSS class in `FileProgressBar.tsx`:** Used at line 151 (`className="btn btn-secondary"`). Class is defined in `frontend/src/styles/components.css:34`. No missing style.
+
+- **`globals.css` additions from phase implementation (not fixer):** Newly added
+  `@keyframes slideInRight`, `.spinner`, `.btn`, `.btn-primary`, `.btn-ghost`,
+  `.btn-danger` blocks are all valid and consistent with their usage sites. No collision
+  with `components.css` variants.
+
+---
+
 ## BLOCKERs
+
+_None._
+
+## WARNINGs
+
+_None._
+
+---
+
+## Iteration 1 Findings (archived)
 
 ### B1: `apiFetch` error-body parser reads fields that don't exist at the top level of FastAPI's error envelope
 
@@ -113,8 +216,6 @@ iteration: 1
 **Resolution:** fixed (b76deb2) — unwraps `body.detail` when it is an object (HTTPException path) before extracting `error_code`/`message`; falls back to `body` itself for the generic Exception handler path. `tsc --noEmit` clean; `npm run build` 0 errors; 37 backend tests pass.
 
 ---
-
-## WARNINGs
 
 ### W1: Duplicate skip-link rendered once the app has a session
 
@@ -189,7 +290,7 @@ iteration: 1
 
 | Seam | Result |
 |---|---|
-| `apiFetch` error shape ↔ FastAPI `HTTPException` default handler | **B1** — mismatch on `detail` envelope |
+| `apiFetch` error shape ↔ FastAPI `HTTPException` default handler | **B1** — fixed (b76deb2) |
 | `createSession` / `getSession` response shape ↔ `Session` type | OK — `session_id`, `created_at`, `document_count` match |
 | `uploadDocument` return shape ↔ `{ doc_id, filename, status }` call site | OK |
 | `sendQuery` → `QueryInitResponse.message_id` ↔ `openChatStream(messageId)` | OK |
@@ -206,3 +307,6 @@ iteration: 1
 | `EventSource` cleanup in `useDocuments` on unmount | OK — `activeStreams`/`activePolls` Maps iterated in `useEffect` cleanup |
 | `react-markdown` v9 XSS surface | OK — raw HTML stripped by default; no `rehype-raw` or `allowDangerousHtml` configured |
 | `VITE_API_BASE_URL` used consistently across `client.ts`, `chat.ts`, `documents.ts` | OK — same env var, same fallback `''` |
+| `MessageBubble.onRetry` signature `() => void` ↔ `MessageThread` call site | OK — `MessageThread` pre-binds `priorUserQuery` in closure before passing down (iteration 2) |
+| `onLlmError` double-notification (toast + error bubble) | OK — intentional: toast is transient, error bubble is persistent; distinct UI surfaces |
+| `btn-secondary` CSS class ↔ `FileProgressBar.tsx:151` usage | OK — defined in `components.css:34` |
