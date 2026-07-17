@@ -2,8 +2,8 @@
 
 ## Current Position
 - **Phase:** 02-core-mvp-ui
-- **Current Task:** T07 (T06 complete)
-- **Next Task:** T07 — Chat API Module & useChat Hook
+- **Current Task:** T08 (T07 complete)
+- **Next Task:** T08 — Chat Interface Components
 - **Status:** Phase 02 in progress
 
 ## Phase 02 Progress
@@ -15,9 +15,10 @@
 - [x] T04 — Document API Module & useDocuments Hook (pre-scaffolded in 0d5bff6; verified spec compliance + build passes)
 - [x] T05 — Upload Zone Component (commit: 30c06e6; build passes 0 errors)
 - [x] T06 — Document Panel Component (pre-scaffolded in 0d5bff6; verified spec compliance + build passes 0 errors)
+- [x] T07 — Chat API Module & useChat Hook (pre-scaffolded in 0d5bff6; verified spec compliance + build passes 0 errors)
 
 ### Pending Tasks
-- [ ] T07 — Chat API Module & useChat Hook
+- [ ] T08 — Chat Interface Components
 - [ ] T08 — Chat Interface Components
 - [ ] T09 — Citation Components
 - [ ] T10 — Feedback Components
@@ -61,6 +62,6 @@
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
 ## Last Session
-- **Stopped At:** Completed Phase 02 T06 — Document Panel Component (pre-scaffolded in 0d5bff6; build passes 0 errors)
-- **Resume From:** Phase 02 T07 — Chat API Module & useChat Hook
-- **Timestamp:** 2026-07-17T18:05:00Z
+- **Stopped At:** Completed Phase 02 T07 — Chat API Module & useChat Hook (pre-scaffolded in 0d5bff6; verified spec compliance + build passes 0 errors)
+- **Resume From:** Phase 02 T08 — Chat Interface Components
+- **Timestamp:** 2026-07-17T18:20:00Z
