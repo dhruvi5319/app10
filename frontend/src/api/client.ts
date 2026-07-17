@@ -52,8 +52,13 @@ export async function apiFetch<T>(
 
     try {
       const body = await response.json();
-      errorCode = body.error_code ?? errorCode;
-      errorMessage = body.message ?? body.detail ?? errorMessage;
+      // FastAPI's default HTTPException handler wraps the detail one level deep:
+      // { "detail": { "error_code": "...", "message": "..." } }
+      // The generic Exception handler emits fields at the top level directly.
+      // Unwrap the envelope when present; fall back to the body itself.
+      const payload = body?.detail && typeof body.detail === 'object' ? body.detail : body;
+      errorCode = payload.error_code ?? errorCode;
+      errorMessage = payload.message ?? errorMessage;
     } catch {
       // Could not parse error body — use defaults
     }
