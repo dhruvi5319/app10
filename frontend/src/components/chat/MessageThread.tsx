@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import type { Message } from '@/types/api';
+import { isErrorMessage } from '@/hooks/useChat';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 
@@ -100,12 +101,21 @@ export default function MessageThread({
         </div>
       ) : (
         <>
-          {messages.map((msg) => {
+          {messages.map((msg, index) => {
             const isStreamingThis =
               queryInFlight &&
               msg.role === 'assistant' &&
               msg.message_id === streamingMessageId &&
               streamingContent !== '';
+
+            // For error bubbles, find the preceding user query to pass to onRetry
+            const isErrorBubble =
+              msg.role === 'assistant' && isErrorMessage(msg.content);
+            const priorUserQuery =
+              isErrorBubble && onRetry
+                ? (messages.slice(0, index).reverse().find((m) => m.role === 'user')
+                    ?.content ?? null)
+                : null;
 
             return (
               <MessageBubble
@@ -113,7 +123,11 @@ export default function MessageThread({
                 message={msg}
                 isStreaming={isStreamingThis}
                 streamingContent={isStreamingThis ? streamingContent : undefined}
-                onRetry={onRetry}
+                onRetry={
+                  isErrorBubble && onRetry && priorUserQuery
+                    ? () => onRetry(priorUserQuery)
+                    : undefined
+                }
               />
             );
           })}

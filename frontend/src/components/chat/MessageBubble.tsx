@@ -9,7 +9,9 @@ interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
   streamingContent?: string;
-  onRetry?: (query: string) => void;
+  /** Called when user clicks "Try again". The caller is responsible for
+   *  providing the correct query (i.e. the preceding user message content). */
+  onRetry?: () => void;
 }
 
 export default function MessageBubble({
@@ -86,7 +88,7 @@ export default function MessageBubble({
                     fontSize: '0.85rem',
                     textDecoration: 'underline',
                   }}
-                  onClick={() => onRetry(message.content)}
+                  onClick={() => onRetry()}
                 >
                   Try again
                 </button>
