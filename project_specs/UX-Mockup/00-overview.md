@@ -2,6 +2,7 @@
 
 **Project:** RAGChatbot
 **Generated:** 2026-05-13
+**Updated:** 2026-08-19 — Visual design system upgraded to modern aesthetic (see Design Language section)
 **Based on:** UserStories-RAGChatbot.md · JOURNEYS-RAGChatbot.md · PRD-RAGChatbot.md · FRD-RAGChatbot.md
 
 ---
@@ -25,6 +26,42 @@ The RAG Chatbot UI is built around a single, trust-building moment: the user see
 4. **Progressive disclosure** — Citation details, confirmation prompts, and advanced filters appear only when needed. The default view is clean.
 5. **Explicit over implicit** — "Not found" is a first-class response, not silence. Error states carry specific, actionable messages.
 6. **No blank screens** — Skeleton loaders, empty states with calls-to-action, and loading indicators fill every wait moment.
+
+### Design Language (Modern Aesthetic — Phase 3+)
+
+The v1 implementation used a functional dark theme. The target design language elevates this to a premium, modern aesthetic:
+
+**Visual Treatment**
+- **Glassmorphism surfaces** — sidebar and input bar use `backdrop-filter: blur(…)` with semi-transparent backgrounds, creating depth and layering
+- **Gradient accents** — primary actions use a `#6c63ff → #a855f7` purple gradient; user message bubbles use a subtle gradient fill
+- **Glow effects** — focused inputs and hovered interactive elements emit a soft `box-shadow` glow using the accent colour at low opacity
+- **Layered shadows** — cards use multi-stop shadows (`0 1px 2px …, 0 4px 16px …`) to lift off the background
+- **Gradient borders** — key containers use a 1px border rendered via `background-image: linear-gradient(…)` on a pseudo-element or `border-image`
+
+**Motion**
+- Message bubbles animate in with a `slideUp` + `fadeIn` combination (200ms, ease-out)
+- The upload zone pulses its accent border on drag-over
+- Streaming cursor blinks at 1s intervals
+- All state transitions (badge colour changes, panel collapse) use `transition: all 0.2s ease`
+
+**Typography**
+- Inter remains the primary typeface; weight scale extended to use 300 (light) for secondary text, 700 (bold) for headings and brand mark
+- Brand mark in the chat header gets an `A` gradient treatment matching the accent gradient
+
+**Colour Tokens Added**
+
+| Token | Value | Purpose |
+|---|---|---|
+| `--gradient-accent` | `linear-gradient(135deg, #6c63ff, #a855f7)` | Primary action gradient |
+| `--gradient-user-bubble` | `linear-gradient(135deg, #2d3250, #3d2f6e)` | User message fill |
+| `--glow-accent` | `0 0 0 3px rgba(108,99,255,0.25)` | Focus/hover glow |
+| `--glow-accent-strong` | `0 0 20px rgba(108,99,255,0.35)` | Ambient accent glow |
+| `--surface-glass` | `rgba(26,29,38,0.7)` | Glassmorphism surface bg |
+| `--shadow-deep` | `0 1px 2px rgba(0,0,0,0.4), 0 8px 32px rgba(0,0,0,0.35)` | Elevated card shadow |
+| `--radius-xl` | `20px` | Larger pill/bubble radius |
+
+**Accessibility Preservation**
+All contrast ratios remain WCAG AA compliant. Glow effects are additive only — no colour information is conveyed by glow alone. `prefers-reduced-motion` media query disables non-essential animations.
 
 ### Layout Architecture
 
