@@ -299,6 +299,16 @@ The following NFRs from PRD §7 are addressed across phases:
 | OpenAI API unavailable during demo | High | Phase 2 | Error bubble + retry CTA in chat; `LLM_UNAVAILABLE` error code surfaced clearly (F5) |
 | Streaming SSE cross-browser compatibility | Medium | Phase 2 | Use `EventSource` API (broadly supported); fallback to polling via `GET /api/documents/{doc_id}/status` |
 
+### Phase 4: Modern and aesthetic UI redesign
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /pivota_spec:plan-phase 4 to break down)
+
 ---
 
 *Document generated: 2026-05-13*

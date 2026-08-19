@@ -43,6 +43,11 @@
 |-------|------|----------|-------|-------|
 | 01-foundation-rag-pipeline | T01-T12 | 32min | 12 | 27 |
 
+## Accumulated Context
+
+### Roadmap Evolution
+- Phase 4 added: Modern and aesthetic UI redesign
+
 ## Last Session
 - **Stopped At:** Completed Phase 01 — all 12 tasks done (T12 commit: f99021a)
 - **Resume From:** Phase 02 (TBD)
