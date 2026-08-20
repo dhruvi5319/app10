@@ -313,6 +313,72 @@ Reset the entire session — purges all documents, vector index entries, and mes
 
 ---
 
+### §Settings
+
+#### GET /api/settings
+
+Return the current LLM provider, model, and masked API key status. Settings are global (not session-scoped); no session cookie required.
+
+**Request:** No body.
+
+**Responses:**
+
+`200 OK` — no settings saved yet:
+```json
+{
+  "has_key": false,
+  "provider": "openai",
+  "model": "gpt-4o",
+  "api_key_masked": ""
+}
+```
+
+`200 OK` — settings exist:
+```json
+{
+  "has_key": true,
+  "provider": "openai",
+  "model": "gpt-4o",
+  "api_key_masked": "sk-...XXXX"
+}
+```
+
+*Raw API key is never returned. `api_key_masked` is derived by decrypting the stored key in memory and taking the last 4 characters with a provider prefix; the raw key is immediately discarded.*
+
+---
+
+#### PUT /api/settings
+
+Save or update LLM provider, model name, and API key. Performs a single-row upsert. The raw key is Fernet-encrypted before storage.
+
+**Request body (JSON):**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `provider` | string | Yes | `"openai"` or `"anthropic"` (case-sensitive) |
+| `model` | string | Yes | LLM model name; any non-empty string |
+| `api_key` | string | Yes (field) | Raw API key. Empty string = keep existing key. Non-empty = encrypt and replace. |
+
+**Responses:**
+
+`200 OK`
+```json
+{
+  "success": true,
+  "provider": "openai",
+  "model": "gpt-4o"
+}
+```
+
+`422 Unprocessable Entity` — validation errors:
+- `SETTINGS_KEY_REQUIRED` — `api_key` is empty and no key is currently stored
+- `SETTINGS_INVALID_PROVIDER` — `provider` is not `"openai"` or `"anthropic"`
+- `SETTINGS_MODEL_REQUIRED` — `model` is blank
+
+`500 Internal Server Error` — `ENCRYPTION_CONFIG_ERROR` if `SECRET_KEY` env var is missing or invalid.
+
+---
+
 ### §Health
 
 #### GET /api/health
@@ -363,4 +429,6 @@ System health check — verifies all backend dependencies are reachable.
 | `GET` | `/api/chat/export` | F08 | P3 |
 | `POST` | `/api/chat/feedback` | F07 | P2 |
 | `POST` | `/api/session/reset` | F04 | P1 |
+| `GET` | `/api/settings` | F09 | P1 |
+| `PUT` | `/api/settings` | F09 | P1 |
 | `GET` | `/api/health` | Infra | — |

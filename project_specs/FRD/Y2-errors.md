@@ -75,6 +75,19 @@ This catalog lists every error code that the RAGChatbot API can return, the HTTP
 
 ---
 
+### Settings Errors (F09)
+
+| Error Code | HTTP Status | Feature | Cause | Retry? |
+|---|---|---|---|---|
+| `SETTINGS_KEY_REQUIRED` | 422 | F09 | `api_key` is empty string and no key is currently stored in DB | No — provide a key |
+| `SETTINGS_INVALID_PROVIDER` | 422 | F09 | `provider` is not `"openai"` or `"anthropic"` | No — fix provider value |
+| `SETTINGS_MODEL_REQUIRED` | 422 | F09 | `model` field is blank or whitespace-only | No — provide model name |
+| `ENCRYPTION_CONFIG_ERROR` | 500 | F09 | `SECRET_KEY` env var missing or not a valid Fernet key | No — requires server config fix |
+| `DECRYPTION_FAILED` | 500 | F09 | Stored ciphertext cannot be decrypted (key mismatch or corruption) | No — re-enter API key via PUT |
+| `LLM_UNAVAILABLE` (no key) | 503 | F09, F01 | LLM call attempted but no API key in DB or env; message includes settings prompt | Yes — add key via settings |
+
+---
+
 ### Infrastructure Errors
 
 | Error Code | HTTP Status | Feature | Cause | Retry? |
@@ -88,7 +101,7 @@ This catalog lists every error code that the RAGChatbot API can return, the HTTP
 
 | Status | Used For |
 |---|---|
-| 200 | Successful GET, POST (feedback, session reset), export |
+| 200 | Successful GET, POST (feedback, session reset), export; PUT /api/settings success |
 | 202 | Document upload accepted (async ingestion begins) |
 | 204 | Successful DELETE (no body) |
 | 400 | Client input validation errors |

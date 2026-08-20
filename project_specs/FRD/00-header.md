@@ -2,10 +2,10 @@
 
 **Project:** RAGChatbot  
 **Acronym:** RAGChatbot  
-**Version:** 1.0  
-**Date:** 2026-05-13  
+**Version:** 1.1  
+**Date:** 2026-08-20  
 **Status:** Draft  
-**Based on:** PRD-RAGChatbot.md v1.0
+**Based on:** PRD-RAGChatbot.md v1.0 (updated for Phase 5 — F9)
 
 ---
 
@@ -13,13 +13,13 @@
 
 This FRD specifies the detailed functional behavior of every feature in the RAGChatbot v1 product. It is the authoritative implementation reference: each feature section defines inputs, outputs, validation rules, error states, and the API/schema surfaces involved. Developers should implement exactly what is stated here without inferring undocumented behavior.
 
-The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 features, three MVP-completing P1 features, two post-MVP P2 features, and one P3 backlog convenience feature.
+The FRD covers all ten PRD features (F0–F9) including three MVP-critical P0 features, four P1 features (three MVP-completing plus F9 added in Phase 5), two post-MVP P2 features, and one P3 backlog convenience feature.
 
 ---
 
 ## Conventions
 
-- **Feature IDs** follow the PRD numbering: `F0` through `F8`. Chunk filenames use zero-padded format (`F00`, `F01`, …) for lexicographic sort order.
+- **Feature IDs** follow the PRD numbering: `F0` through `F9`. Chunk filenames use zero-padded format (`F00`, `F01`, …) for lexicographic sort order.
 - **Required / Optional** labels indicate whether a field must be present for a request to succeed.
 - **HTTP verbs** are uppercase; paths use `:param` notation for path parameters.
 - **Error codes** are `SCREAMING_SNAKE_CASE` strings returned in JSON error bodies.
@@ -44,6 +44,7 @@ The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 f
 | `F06-multi-document-retrieval.md` | F6: Multi-Document Context Retrieval |
 | `F07-answer-confidence-feedback.md` | F7: Answer Confidence & Relevance Feedback |
 | `F08-export-copy-utilities.md` | F8: Export & Copy Utilities |
+| `F09-llm-settings-panel.md` | F9: LLM Settings Panel |
 | `Y0-schema.md` | Consolidated Database / Storage Schema (DDL) |
 | `Y1-api.md` | Consolidated REST API Endpoint Catalog |
 | `Y2-errors.md` | Cross-Feature Error Catalog |
@@ -86,6 +87,7 @@ The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 f
 | F6 | Multi-Document Context Retrieval | P2 | 🔄 Post-MVP |
 | F7 | Answer Confidence & Relevance Feedback | P2 | 🔄 Post-MVP |
 | F8 | Export & Copy Utilities | P3 | 🔄 Post-MVP |
+| F9 | LLM Settings Panel | P1 | 🔄 Phase 5 |
 
 ---
 
@@ -103,7 +105,8 @@ The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 f
 | Accessibility | Frontend compliance | WCAG 2.1 AA minimum |
 | Browser Support | Frontend compatibility | Latest 2 versions Chrome, Firefox, Safari, Edge |
 | Maintainability | Backend code coverage | > 70% unit test coverage on RAG pipeline |
+| Security | API key storage | Keys encrypted at rest (Fernet); raw key never returned by any endpoint; masked on read (`sk-...XXXX`) |
 
 ---
 
-*FRD-RAGChatbot v1.0 — generated 2026-05-13*
+*FRD-RAGChatbot v1.1 — updated 2026-08-20 (Phase 5: F9 LLM Settings Panel added)*

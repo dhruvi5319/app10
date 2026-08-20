@@ -180,3 +180,46 @@ class AppConfig:
     max_file_size_bytes: int     # Default: 52,428,800 (50MB)
     max_session_size_bytes: int  # Default: 209,715,200 (200MB)
 ```
+
+---
+
+### §LLMSettings
+
+Persistent SQLite table storing LLM provider configuration and encrypted API key. This is a **single-row table** (`id = 1` always); `PUT /api/settings` performs an upsert. Added in Phase 5 (F9).
+
+**SQLite DDL:**
+
+```sql
+CREATE TABLE IF NOT EXISTS llm_settings (
+    id            INTEGER PRIMARY KEY,   -- Always 1; single-row table
+    provider      TEXT    NOT NULL,      -- "openai" | "anthropic"
+    model         TEXT    NOT NULL,      -- e.g. "gpt-4o" or "claude-3-5-sonnet-20241022"
+    encrypted_key TEXT,                  -- Fernet ciphertext of raw API key; NULL if no key saved yet
+    updated_at    TEXT    NOT NULL       -- UTC ISO 8601 timestamp of last write
+);
+```
+
+**Python model equivalent:**
+
+```python
+class LLMSettings:
+    id: int              # Always 1
+    provider: str        # "openai" | "anthropic"
+    model: str           # LLM model name string
+    encrypted_key: str | None  # Fernet ciphertext; None if no key stored
+    updated_at: str      # UTC ISO 8601 datetime string
+```
+
+**Encryption contract:**
+- Encryption algorithm: Fernet symmetric (AES-128-CBC + HMAC-SHA256), from the Python `cryptography` package.
+- Encryption key source: `SECRET_KEY` environment variable — must be a valid 44-character URL-safe base64-encoded Fernet key.
+- `encrypt_api_key(raw_key: str, secret: str) -> str` — returns Fernet token (URL-safe base64 string).
+- `decrypt_api_key(token: str, secret: str) -> str` — returns raw key; raises `InvalidToken` if key or data is corrupted.
+- The raw API key must never be written to disk, logs, or any API response body.
+
+**Masking rule (for `GET /api/settings` response):**
+- Decrypt `encrypted_key` in memory to obtain raw key.
+- Masked value = provider-prefix + `"..."` + last 4 chars of raw key.
+  - OpenAI: `"sk-...XXXX"`
+  - Anthropic: `"sk-ant-...XXXX"`
+- Discard raw key from memory immediately after masking.

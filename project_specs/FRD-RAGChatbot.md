@@ -2,10 +2,10 @@
 
 **Project:** RAGChatbot  
 **Acronym:** RAGChatbot  
-**Version:** 1.0  
-**Date:** 2026-05-13  
+**Version:** 1.1  
+**Date:** 2026-08-20  
 **Status:** Draft  
-**Based on:** PRD-RAGChatbot.md v1.0
+**Based on:** PRD-RAGChatbot.md v1.0 (updated for Phase 5 — F9)
 
 ---
 
@@ -13,13 +13,13 @@
 
 This FRD specifies the detailed functional behavior of every feature in the RAGChatbot v1 product. It is the authoritative implementation reference: each feature section defines inputs, outputs, validation rules, error states, and the API/schema surfaces involved. Developers should implement exactly what is stated here without inferring undocumented behavior.
 
-The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 features, three MVP-completing P1 features, two post-MVP P2 features, and one P3 backlog convenience feature.
+The FRD covers all ten PRD features (F0–F9) including three MVP-critical P0 features, four P1 features (three MVP-completing plus F9 added in Phase 5), two post-MVP P2 features, and one P3 backlog convenience feature.
 
 ---
 
 ## Conventions
 
-- **Feature IDs** follow the PRD numbering: `F0` through `F8`. Chunk filenames use zero-padded format (`F00`, `F01`, …) for lexicographic sort order.
+- **Feature IDs** follow the PRD numbering: `F0` through `F9`. Chunk filenames use zero-padded format (`F00`, `F01`, …) for lexicographic sort order.
 - **Required / Optional** labels indicate whether a field must be present for a request to succeed.
 - **HTTP verbs** are uppercase; paths use `:param` notation for path parameters.
 - **Error codes** are `SCREAMING_SNAKE_CASE` strings returned in JSON error bodies.
@@ -44,6 +44,7 @@ The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 f
 | `F06-multi-document-retrieval.md` | F6: Multi-Document Context Retrieval |
 | `F07-answer-confidence-feedback.md` | F7: Answer Confidence & Relevance Feedback |
 | `F08-export-copy-utilities.md` | F8: Export & Copy Utilities |
+| `F09-llm-settings-panel.md` | F9: LLM Settings Panel |
 | `Y0-schema.md` | Consolidated Database / Storage Schema (DDL) |
 | `Y1-api.md` | Consolidated REST API Endpoint Catalog |
 | `Y2-errors.md` | Cross-Feature Error Catalog |
@@ -86,6 +87,7 @@ The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 f
 | F6 | Multi-Document Context Retrieval | P2 | 🔄 Post-MVP |
 | F7 | Answer Confidence & Relevance Feedback | P2 | 🔄 Post-MVP |
 | F8 | Export & Copy Utilities | P3 | 🔄 Post-MVP |
+| F9 | LLM Settings Panel | P1 | 🔄 Phase 5 |
 
 ---
 
@@ -103,10 +105,11 @@ The FRD covers all nine PRD features (F0–F8) including three MVP-critical P0 f
 | Accessibility | Frontend compliance | WCAG 2.1 AA minimum |
 | Browser Support | Frontend compatibility | Latest 2 versions Chrome, Firefox, Safari, Edge |
 | Maintainability | Backend code coverage | > 70% unit test coverage on RAG pipeline |
+| Security | API key storage | Keys encrypted at rest (Fernet); raw key never returned by any endpoint; masked on read (`sk-...XXXX`) |
 
 ---
 
-*FRD-RAGChatbot v1.0 — generated 2026-05-13*
+*FRD-RAGChatbot v1.1 — updated 2026-08-20 (Phase 5: F9 LLM Settings Panel added)*
 ---
 
 ## F00: Document Upload & Ingestion
@@ -1477,6 +1480,195 @@ See `Y1-api.md` §Export for full request/response schemas.
 No new schema entities. Reads from message store (see `Y0-schema.md` §Messages). Export is read-only.
 ---
 
+## F09: LLM Settings Panel
+
+**Priority:** P1 — Phase 5  
+**PRD Reference:** §5 F9
+
+**Description:** A user-facing settings panel lets users configure their LLM provider, model name, and API key directly through the UI without editing `.env` files or restarting the server. The API key is encrypted at rest using Fernet symmetric encryption and is never returned in plain text after it has been saved — the GET endpoint returns a masked representation (e.g., `sk-...XXXX`). Settings are persisted in a dedicated `llm_settings` SQLite table and are applied at call time to all subsequent chat queries, overriding any `.env` value when a saved key exists. The app can boot without an API key in `.env` if a saved key is present in the database.
+
+---
+
+### Terminology
+
+- **Fernet Encryption:** Symmetric authenticated encryption provided by the Python `cryptography` library. Uses AES-128-CBC with HMAC-SHA256. Keys are URL-safe base64-encoded 32-byte values.
+- **SECRET_KEY:** The server-side environment variable (a valid Fernet key) used as the encryption/decryption key for stored API keys. Must be set at deployment time.
+- **Encrypted Key:** The Fernet-encrypted ciphertext of the raw API key; stored in the `llm_settings.encrypted_key` column.
+- **Masked Key:** A safe display representation of the stored key — all characters replaced except the final 4, prefixed with a provider-appropriate hint (e.g., `sk-...XXXX`). Never decrypted for display.
+- **Settings Modal:** The frontend UI overlay triggered by the gear icon; contains provider, model, and API key fields.
+- **Key Badge:** A secondary UI element shown next to the API key input when `has_key: true`; displays the masked key string (e.g., `Key saved (sk-...XXXX)`).
+
+---
+
+### Sub-Features
+
+- `llm_settings` SQLite table (single-row settings store; upsert on save)
+- Fernet encryption/decryption utility (`encrypt_api_key` / `decrypt_api_key`)
+- `GET /api/settings` — returns current provider, model, and masked key; raw key never returned
+- `PUT /api/settings` — accepts provider, model, and raw API key; encrypts before writing; returns updated settings summary
+- At-call-time key resolution: backend reads and decrypts stored key before each LLM/embedding call; overrides env var when DB setting exists
+- App boots without `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` in `.env` if `llm_settings` row exists
+- Gear icon button in app header/sidebar opens the settings modal
+- Settings modal: Provider select (OpenAI / Anthropic), Model text input, API Key password input
+- Key badge shown next to API key field when `has_key: true`
+- Save button state: disabled when API key field is empty AND `has_key: false`
+- Success toast on save; inline field-level error on failure
+- Modal closes on successful save or Cancel
+
+---
+
+### Process
+
+#### Backend — Save Settings (`PUT /api/settings`)
+
+1. Client sends `PUT /api/settings` with JSON body `{ provider, model, api_key }`.
+2. Backend validates `provider` is one of `"openai"` or `"anthropic"`; returns 422 `SETTINGS_INVALID_PROVIDER` if not.
+3. Backend validates `api_key` is a non-empty string; if empty **and** no existing row in `llm_settings` exists, returns 422 `SETTINGS_KEY_REQUIRED`. If empty **and** an existing row exists, the existing encrypted key is preserved (key omission = keep current key).
+4. If `api_key` is non-empty, backend calls `encrypt_api_key(api_key, SECRET_KEY)` using Fernet; stores resulting ciphertext.
+5. Backend upserts the `llm_settings` table (single row, `id = 1`): sets `provider`, `model`, `encrypted_key` (if new key provided), and `updated_at` to current UTC timestamp.
+6. Backend returns `200 OK` with `{ success: true, provider, model }`. Raw key and ciphertext are not included.
+
+#### Backend — Get Settings (`GET /api/settings`)
+
+1. Client sends `GET /api/settings` with no body.
+2. Backend queries `llm_settings` for `id = 1`.
+3. If no row exists: returns `200 OK` with `{ has_key: false, provider: "openai", model: "gpt-4o", api_key_masked: "" }`.
+4. If row exists: backend computes the masked key string from `encrypted_key` (decrypt to get raw key in memory; apply masking; do not log or return raw key).
+   - **Masking rule:** Take the last 4 characters of the raw API key; prepend `sk-...` (for OpenAI) or `sk-ant-...` (for Anthropic). Example: raw key `sk-abc123XYZ` → masked `sk-...3XYZ`.
+   - Raw key is discarded from memory immediately after masking.
+5. Returns `200 OK` with `{ has_key: true, provider, model, api_key_masked }`.
+
+#### Backend — At-Call-Time Key Resolution
+
+When the backend is about to make an LLM or embedding API call:
+
+1. Query `llm_settings` for `id = 1`.
+2. If row exists and `encrypted_key` is non-null: call `decrypt_api_key(encrypted_key, SECRET_KEY)` to obtain the raw key in memory.
+3. Inject the raw key into the LLM client as the API key for this call only; do not cache it in memory beyond the call.
+4. If no row exists (or `encrypted_key` is null): fall back to `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` environment variables.
+5. If neither source yields a key, the call fails with `LLM_UNAVAILABLE` (503) — surface an actionable message: "No API key configured. Open Settings to add your key."
+
+#### Frontend — Open Settings Modal
+
+1. User clicks the gear icon in the app header or sidebar.
+2. Frontend calls `GET /api/settings`.
+3. Modal renders with current `provider` and `model` pre-filled from the response.
+4. API Key field renders as `<input type="password">` — always blank on open (never pre-filled with masked or raw key).
+5. If `has_key: true`, a Key Badge is shown next to the API Key field: `"Key saved (sk-...XXXX)"` using the `api_key_masked` value from the response.
+6. Save button is disabled if: API Key field is empty AND `has_key: false`.
+
+#### Frontend — Save Settings
+
+1. User fills in or updates fields and clicks Save.
+2. Frontend sends `PUT /api/settings` with `{ provider, model, api_key }`. If API Key field is empty, `api_key` is sent as an empty string (backend interprets this as "keep current key").
+3. On `200 OK`: display success toast "Settings saved"; close modal.
+4. On `422 SETTINGS_KEY_REQUIRED`: display inline error below the API Key field: "An API key is required when no key is currently saved."
+5. On `422 SETTINGS_INVALID_PROVIDER`: display inline error below the Provider field: "Invalid provider selected."
+6. On any other error: display inline error below the Save button with the `message` field from the error response.
+7. User clicks Cancel: modal closes without saving; no API call made.
+
+---
+
+### Inputs
+
+**`GET /api/settings`:**
+- No request body.
+- Session cookie not required (settings are global, not session-scoped).
+
+**`PUT /api/settings` request body (JSON):**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `provider` | string | Yes | `"openai"` or `"anthropic"` |
+| `model` | string | Yes | LLM model name (e.g., `"gpt-4o"`, `"claude-3-5-sonnet-20241022"`); free-text, not validated against a list |
+| `api_key` | string | Yes (field must be present) | Raw API key. Empty string = keep existing key. Non-empty = replace key. |
+
+---
+
+### Outputs
+
+**`GET /api/settings` — no existing settings:**
+```json
+{
+  "has_key": false,
+  "provider": "openai",
+  "model": "gpt-4o",
+  "api_key_masked": ""
+}
+```
+
+**`GET /api/settings` — settings exist:**
+```json
+{
+  "has_key": true,
+  "provider": "openai",
+  "model": "gpt-4o",
+  "api_key_masked": "sk-...XXXX"
+}
+```
+
+**`PUT /api/settings` — success:**
+```json
+{
+  "success": true,
+  "provider": "openai",
+  "model": "gpt-4o"
+}
+```
+
+---
+
+### Validation Rules
+
+- `provider` must be exactly `"openai"` or `"anthropic"` (case-sensitive). Any other value → 422 `SETTINGS_INVALID_PROVIDER`.
+- `model` must be a non-empty string after trimming whitespace. Blank model → 422 `SETTINGS_MODEL_REQUIRED`.
+- `api_key` field must be present in the request body (even if empty string).
+- `api_key` is an empty string AND no `llm_settings` row exists → 422 `SETTINGS_KEY_REQUIRED`.
+- `api_key` is an empty string AND a `llm_settings` row with a non-null `encrypted_key` exists → existing key is preserved; no re-encryption occurs.
+- `api_key` is a non-empty string → always encrypt and overwrite, regardless of whether a key already exists.
+- `SECRET_KEY` must be a valid Fernet key (44-character URL-safe base64 string). If missing or malformed at startup, the backend must log a startup error and refuse to serve settings endpoints until corrected.
+- Raw API key must never appear in application logs, error responses, or SSE streams.
+- `llm_settings` table stores at most one row (`id = 1`); `PUT` is always an upsert.
+- Settings are global (not session-scoped); one configuration applies to all sessions on the server.
+
+---
+
+### Error States
+
+| Scenario | HTTP Status | Error Code | Message |
+|---|---|---|---|
+| `api_key` empty, no existing key | 422 | `SETTINGS_KEY_REQUIRED` | "An API key is required when no key is currently saved" |
+| `provider` not `openai` or `anthropic` | 422 | `SETTINGS_INVALID_PROVIDER` | "Provider must be 'openai' or 'anthropic'" |
+| `model` is blank | 422 | `SETTINGS_MODEL_REQUIRED` | "Model name is required" |
+| `SECRET_KEY` env var missing or invalid (runtime) | 500 | `ENCRYPTION_CONFIG_ERROR` | "Server encryption configuration error; contact administrator" |
+| Fernet decryption fails (key mismatch / corruption) | 500 | `DECRYPTION_FAILED` | "Failed to decrypt stored API key; please re-enter your key" |
+| LLM call with no key configured | 503 | `LLM_UNAVAILABLE` | "No API key configured. Open Settings to add your key." |
+
+---
+
+### API Surface (this feature)
+
+See `Y1-api.md` §Settings for full request/response schemas.
+
+| Method | Path | Summary |
+|---|---|---|
+| `GET` | `/api/settings` | Return current LLM provider, model, and masked key status |
+| `PUT` | `/api/settings` | Save (or update) LLM provider, model, and API key (encrypted at rest) |
+
+---
+
+### Schema Surface (this feature)
+
+New SQLite table `llm_settings`. See `Y0-schema.md` §LLMSettings for full DDL.
+
+Key fields:
+- `id` (INTEGER, PK) — always `1`; single-row table
+- `provider` (TEXT) — `"openai"` or `"anthropic"`
+- `model` (TEXT) — LLM model name string
+- `encrypted_key` (TEXT) — Fernet ciphertext of the raw API key; null if no key has been saved
+- `updated_at` (TEXT) — UTC ISO 8601 timestamp of last save
+---
+
 ## Y0: Database / Storage Schema
 
 **Scope:** This section defines all data structures used by the RAGChatbot backend. Because v1 uses in-memory / server-side session storage (no persistent SQL database), schema definitions are expressed as Python dataclass / Pydantic model equivalents and JSON structures rather than SQL DDL. A migration to a persistent store (PostgreSQL + pgvector, or SQLite) in a future version should be straightforward from these definitions.
@@ -1657,6 +1849,49 @@ class AppConfig:
     max_file_size_bytes: int     # Default: 52,428,800 (50MB)
     max_session_size_bytes: int  # Default: 209,715,200 (200MB)
 ```
+
+---
+
+### §LLMSettings
+
+Persistent SQLite table storing LLM provider configuration and encrypted API key. This is a **single-row table** (`id = 1` always); `PUT /api/settings` performs an upsert. Added in Phase 5 (F9).
+
+**SQLite DDL:**
+
+```sql
+CREATE TABLE IF NOT EXISTS llm_settings (
+    id            INTEGER PRIMARY KEY,   -- Always 1; single-row table
+    provider      TEXT    NOT NULL,      -- "openai" | "anthropic"
+    model         TEXT    NOT NULL,      -- e.g. "gpt-4o" or "claude-3-5-sonnet-20241022"
+    encrypted_key TEXT,                  -- Fernet ciphertext of raw API key; NULL if no key saved yet
+    updated_at    TEXT    NOT NULL       -- UTC ISO 8601 timestamp of last write
+);
+```
+
+**Python model equivalent:**
+
+```python
+class LLMSettings:
+    id: int              # Always 1
+    provider: str        # "openai" | "anthropic"
+    model: str           # LLM model name string
+    encrypted_key: str | None  # Fernet ciphertext; None if no key stored
+    updated_at: str      # UTC ISO 8601 datetime string
+```
+
+**Encryption contract:**
+- Encryption algorithm: Fernet symmetric (AES-128-CBC + HMAC-SHA256), from the Python `cryptography` package.
+- Encryption key source: `SECRET_KEY` environment variable — must be a valid 44-character URL-safe base64-encoded Fernet key.
+- `encrypt_api_key(raw_key: str, secret: str) -> str` — returns Fernet token (URL-safe base64 string).
+- `decrypt_api_key(token: str, secret: str) -> str` — returns raw key; raises `InvalidToken` if key or data is corrupted.
+- The raw API key must never be written to disk, logs, or any API response body.
+
+**Masking rule (for `GET /api/settings` response):**
+- Decrypt `encrypted_key` in memory to obtain raw key.
+- Masked value = provider-prefix + `"..."` + last 4 chars of raw key.
+  - OpenAI: `"sk-...XXXX"`
+  - Anthropic: `"sk-ant-...XXXX"`
+- Discard raw key from memory immediately after masking.
 ---
 
 ## Y1: REST API Endpoint Catalog
@@ -1972,6 +2207,72 @@ Reset the entire session — purges all documents, vector index entries, and mes
 
 ---
 
+### §Settings
+
+#### GET /api/settings
+
+Return the current LLM provider, model, and masked API key status. Settings are global (not session-scoped); no session cookie required.
+
+**Request:** No body.
+
+**Responses:**
+
+`200 OK` — no settings saved yet:
+```json
+{
+  "has_key": false,
+  "provider": "openai",
+  "model": "gpt-4o",
+  "api_key_masked": ""
+}
+```
+
+`200 OK` — settings exist:
+```json
+{
+  "has_key": true,
+  "provider": "openai",
+  "model": "gpt-4o",
+  "api_key_masked": "sk-...XXXX"
+}
+```
+
+*Raw API key is never returned. `api_key_masked` is derived by decrypting the stored key in memory and taking the last 4 characters with a provider prefix; the raw key is immediately discarded.*
+
+---
+
+#### PUT /api/settings
+
+Save or update LLM provider, model name, and API key. Performs a single-row upsert. The raw key is Fernet-encrypted before storage.
+
+**Request body (JSON):**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `provider` | string | Yes | `"openai"` or `"anthropic"` (case-sensitive) |
+| `model` | string | Yes | LLM model name; any non-empty string |
+| `api_key` | string | Yes (field) | Raw API key. Empty string = keep existing key. Non-empty = encrypt and replace. |
+
+**Responses:**
+
+`200 OK`
+```json
+{
+  "success": true,
+  "provider": "openai",
+  "model": "gpt-4o"
+}
+```
+
+`422 Unprocessable Entity` — validation errors:
+- `SETTINGS_KEY_REQUIRED` — `api_key` is empty and no key is currently stored
+- `SETTINGS_INVALID_PROVIDER` — `provider` is not `"openai"` or `"anthropic"`
+- `SETTINGS_MODEL_REQUIRED` — `model` is blank
+
+`500 Internal Server Error` — `ENCRYPTION_CONFIG_ERROR` if `SECRET_KEY` env var is missing or invalid.
+
+---
+
 ### §Health
 
 #### GET /api/health
@@ -2022,6 +2323,8 @@ System health check — verifies all backend dependencies are reachable.
 | `GET` | `/api/chat/export` | F08 | P3 |
 | `POST` | `/api/chat/feedback` | F07 | P2 |
 | `POST` | `/api/session/reset` | F04 | P1 |
+| `GET` | `/api/settings` | F09 | P1 |
+| `PUT` | `/api/settings` | F09 | P1 |
 | `GET` | `/api/health` | Infra | — |
 ---
 
@@ -2100,6 +2403,19 @@ This catalog lists every error code that the RAGChatbot API can return, the HTTP
 
 ---
 
+### Settings Errors (F09)
+
+| Error Code | HTTP Status | Feature | Cause | Retry? |
+|---|---|---|---|---|
+| `SETTINGS_KEY_REQUIRED` | 422 | F09 | `api_key` is empty string and no key is currently stored in DB | No — provide a key |
+| `SETTINGS_INVALID_PROVIDER` | 422 | F09 | `provider` is not `"openai"` or `"anthropic"` | No — fix provider value |
+| `SETTINGS_MODEL_REQUIRED` | 422 | F09 | `model` field is blank or whitespace-only | No — provide model name |
+| `ENCRYPTION_CONFIG_ERROR` | 500 | F09 | `SECRET_KEY` env var missing or not a valid Fernet key | No — requires server config fix |
+| `DECRYPTION_FAILED` | 500 | F09 | Stored ciphertext cannot be decrypted (key mismatch or corruption) | No — re-enter API key via PUT |
+| `LLM_UNAVAILABLE` (no key) | 503 | F09, F01 | LLM call attempted but no API key in DB or env; message includes settings prompt | Yes — add key via settings |
+
+---
+
 ### Infrastructure Errors
 
 | Error Code | HTTP Status | Feature | Cause | Retry? |
@@ -2113,7 +2429,7 @@ This catalog lists every error code that the RAGChatbot API can return, the HTTP
 
 | Status | Used For |
 |---|---|
-| 200 | Successful GET, POST (feedback, session reset), export |
+| 200 | Successful GET, POST (feedback, session reset), export; PUT /api/settings success |
 | 202 | Document upload accepted (async ingestion begins) |
 | 204 | Successful DELETE (no body) |
 | 400 | Client input validation errors |
