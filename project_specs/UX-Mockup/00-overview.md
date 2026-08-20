@@ -2,7 +2,7 @@
 
 **Project:** RAGChatbot
 **Generated:** 2026-05-13
-**Updated:** 2026-08-19 — Visual design system upgraded to modern aesthetic (see Design Language section)
+**Updated:** 2026-08-20 — Screen-05 added for Phase 5 (F9 LLM Settings Panel); gear icon trigger added to app header layout
 **Based on:** UserStories-RAGChatbot.md · JOURNEYS-RAGChatbot.md · PRD-RAGChatbot.md · FRD-RAGChatbot.md
 
 ---
@@ -67,7 +67,7 @@ All contrast ratios remain WCAG AA compliant. Glow effects are additive only —
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  App Header: Logo · Session Controls (Clear Chat, New Session, Export)  │
+│  App Header: Logo · Session Controls (Clear Chat, New Session, Export)  [⚙] │
 ├──────────────────┬──────────────────────────────────────────┤
 │                  │                                          │
 │  Document        │  Chat Area                               │
@@ -94,7 +94,20 @@ All contrast ratios remain WCAG AA compliant. Glow effects are additive only —
 | Confidence & Feedback | US-7.1, US-7.2 | P2 |
 | Document Filter | US-6.1, US-6.2 | P2 |
 | Copy / Export Utilities | US-8.1, US-8.2, US-8.3 | P3 |
+| **LLM Settings Modal** (Screen-05) | **US-9.1, US-9.2, US-9.3, US-9.4, US-9.5** | **P1 (Phase 5)** |
 
 ---
 
-*Chunk files: 00-overview.md · Flow-00 through Flow-04 · Screen-00 through Screen-05 · Y0-patterns.md · Y1-responsive.md · Y2-accessibility.md*
+## Navigation Map (all screens)
+
+| Screen | Route / Trigger | Reached from | Nav element |
+|--------|----------------|--------------|-------------|
+| Main Layout (Screen-00) | `/` | — (app shell) | Direct URL / page load |
+| LLM Settings Modal (Screen-05) | Overlay — no URL change | App header (all screens) | Header: `⚙` icon button (top-right) |
+
+*Modal / overlay screens are reached from the app shell; they do not change the URL. All other screens trace back to the main layout.*
+
+---
+
+*Chunk files: 00-overview.md · Flow-00 through Flow-04 · Screen-00 · Screen-05 · Y0-patterns.md · Y1-responsive.md · Y2-accessibility.md*
+*Updated 2026-08-20: Screen-05 (LLM Settings Modal, Phase 5 / F9) added.*
