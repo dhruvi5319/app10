@@ -433,6 +433,83 @@
 
 ---
 
+## Epic 9: LLM Settings Panel (F9)
+
+*Users can configure their LLM provider, model, and API key directly from the UI without touching server-side configuration files. The API key is encrypted at rest and is never returned in plaintext after it has been saved.*
+
+---
+
+### US-9.1: Open the Settings Panel from the App UI
+**As a** Jordan Kim (Technical Knowledge Worker), **I want to** open a settings panel from the app UI, **so that** I can configure which LLM provider and model the chatbot uses without needing to edit server configuration files.
+
+**Acceptance Criteria:**
+- [ ] A gear/settings icon button is visible in the app header or toolbar at all times
+- [ ] Clicking the gear icon opens a settings modal/drawer
+- [ ] The modal contains a provider select field (e.g. OpenAI, Anthropic), a model name text input, and an API key input field
+- [ ] The modal has Save and Cancel buttons
+- [ ] Pressing Escape or clicking Cancel closes the modal without saving any changes
+- [ ] The modal is keyboard-navigable and focus is trapped within it while open
+
+**Priority:** P1 | **Feature Ref:** F9
+
+---
+
+### US-9.2: Enter an API Key to Power Chatbot Responses
+**As a** Jordan Kim (Technical Knowledge Worker), **I want to** enter my API key in the settings panel, **so that** the app can use it to authenticate LLM requests and power chatbot responses.
+
+**Acceptance Criteria:**
+- [ ] The API key input field renders as `type="password"` — the value is visually obscured at all times
+- [ ] Submitting the form via the Save button sends the provider, model, and raw API key to `POST /api/settings`
+- [ ] After a successful save (204 response), the raw key is never shown again in plaintext anywhere in the UI
+- [ ] `GET /api/settings` returns a masked API key representation (e.g. `sk-...XXXX` — all characters replaced except the last 4, prefixed with a provider-appropriate hint) and never the raw key
+- [ ] The API key field on reload displays the masked value, not the raw key
+
+**Priority:** P1 | **Feature Ref:** F9
+
+---
+
+### US-9.3: Receive Confirmation That the Key Was Saved and Is Active
+**As a** Maya Patel (Research Analyst), **I want to** receive clear confirmation that my API key was saved and is active, **so that** I know the chatbot will use my key for subsequent queries without having to test it blindly.
+
+**Acceptance Criteria:**
+- [ ] After a successful save, a success toast notification is displayed (e.g. "Settings saved")
+- [ ] After a successful save, a "Key saved (sk-...XXXX)" badge or status indicator is visible in the settings panel or app header showing the masked key
+- [ ] The settings modal closes automatically on a successful save
+- [ ] If `POST /api/settings` returns an error, an error toast is displayed with the server's error message and the modal remains open
+- [ ] No success feedback is shown if the request did not return a 204 response
+
+**Priority:** P1 | **Feature Ref:** F9
+
+---
+
+### US-9.4: Change Provider or Model Without Re-Entering an Existing API Key
+**As a** Jordan Kim (Technical Knowledge Worker), **I want to** update my LLM provider or model without re-entering my API key if I already have one saved, **so that** I can switch models quickly without hunting for my credentials again.
+
+**Acceptance Criteria:**
+- [ ] When `GET /api/settings` returns `has_key: true`, the API key input field displays the placeholder text "Enter new key to replace current" instead of a masked value
+- [ ] When the key field is left empty and `has_key: true`, clicking Save keeps the existing encrypted key in the database — only provider and model are updated
+- [ ] When the key field is left empty and `has_key: true`, the Save button is enabled (not disabled due to an empty key field)
+- [ ] When the key field is non-empty on save, the new key replaces the previously stored encrypted key
+- [ ] When `has_key: false` (no key saved), the key field is required and the Save button is disabled if the key field is empty
+
+**Priority:** P1 | **Feature Ref:** F9
+
+---
+
+### US-9.5: API Key Stored Encrypted at Rest
+**As a** Daniel Torres (Legal & Contracts Professional), **I want to** know that my API key is stored encrypted in the database, **so that** a database breach does not expose my raw credentials to a third party.
+
+**Acceptance Criteria:**
+- [ ] The raw API key string is never written to the `llm_settings` database table — only the Fernet-encrypted ciphertext is stored in the key column
+- [ ] The encryption and decryption functions (`encrypt_api_key` / `decrypt_api_key`) reside in a dedicated utility module and use a server-side Fernet key derived from an environment variable
+- [ ] `GET /api/settings` never returns the raw key under any circumstances — it returns only the masked representation
+- [ ] Decryption of the stored key occurs only at query time, within the server process, immediately before the LLM client is initialized — the decrypted value is not logged or persisted
+- [ ] If the encryption environment key is missing or malformed, `POST /api/settings` returns a 500 error and no key is written to the database
+
+**Priority:** P1 | **Feature Ref:** F9
+
+---
+
 ## Story Index
 
 | Story ID | Title | Persona | Priority | Feature Ref |
@@ -460,6 +537,11 @@
 | US-8.1 | Copy an Answer to the Clipboard | Maya Patel | P3 | F8 |
 | US-8.2 | Copy a Source Citation Passage | Daniel Torres | P3 | F8 |
 | US-8.3 | Export the Full Chat Transcript | Jordan Kim | P3 | F8 |
+| US-9.1 | Open the Settings Panel from the App UI | Jordan Kim | P1 | F9 |
+| US-9.2 | Enter an API Key to Power Chatbot Responses | Jordan Kim | P1 | F9 |
+| US-9.3 | Receive Confirmation That the Key Was Saved and Is Active | Maya Patel | P1 | F9 |
+| US-9.4 | Change Provider or Model Without Re-Entering an Existing API Key | Jordan Kim | P1 | F9 |
+| US-9.5 | API Key Stored Encrypted at Rest | Daniel Torres | P1 | F9 |
 
 ---
 
@@ -468,10 +550,10 @@
 | Priority | Stories | Feature Coverage |
 |---|---|---|
 | **P0 — Critical (MVP Blockers)** | US-0.1, US-0.2, US-0.3, US-1.1, US-1.2, US-1.3, US-2.1, US-2.2, US-2.3 | F0, F1, F2 |
-| **P1 — High (MVP Completers)** | US-3.1, US-3.2, US-4.1, US-4.2, US-4.3, US-5.1, US-5.2 | F3, F4, F5 |
+| **P1 — High (MVP Completers)** | US-3.1, US-3.2, US-4.1, US-4.2, US-4.3, US-5.1, US-5.2, US-9.1, US-9.2, US-9.3, US-9.4, US-9.5 | F3, F4, F5, F9 |
 | **P2 — Medium (Post-MVP v1.1)** | US-6.1, US-6.2, US-7.1, US-7.2 | F6, F7 |
 | **P3 — Low (Backlog)** | US-8.1, US-8.2, US-8.3 | F8 |
 
 ---
 
-*Document generated: 2026-05-13 | RAGChatbot UserStories v1.0*
+*Document generated: 2026-05-13 | RAGChatbot UserStories v1.0 — Updated 2026-08-20: added Epic 9 (F9 — LLM Settings Panel, Phase 5)*
