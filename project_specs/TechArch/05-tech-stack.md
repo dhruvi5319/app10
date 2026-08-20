@@ -23,6 +23,7 @@
 | Vector Store (default) | chromadb | 0.5+ | In-process local vector store with metadata filtering |
 | Vector Store (alt) | faiss-cpu | 1.8+ | Local FAISS index with companion metadata JSON |
 | Vector Store (cloud) | pinecone | 4.0+ | Pinecone hosted index with namespace isolation |
+| Encryption | cryptography | 42.0+ | Fernet symmetric encryption for LLM API key at-rest storage |
 | HTTP Client | httpx | 0.27+ | Async HTTP for external API calls |
 | Testing | pytest + pytest-asyncio | 8.x / 0.23+ | Backend unit/integration tests |
 | Test coverage | pytest-cov | 5.x | Coverage reporting (target: > 70% on RAG pipeline) |
@@ -89,6 +90,10 @@ SESSION_TTL_HOURS=24
 MAX_DOCUMENTS_PER_SESSION=20
 MAX_FILE_SIZE_BYTES=52428800                 # 50 MB
 MAX_SESSION_SIZE_BYTES=209715200             # 200 MB
+
+# ── LLM Settings (F9) ─────────────────────────────────────────
+SECRET_KEY=<fernet-base64-key>               # Required: 32-byte URL-safe base64 key
+                                              # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
 # ── Server ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS=http://localhost:3000

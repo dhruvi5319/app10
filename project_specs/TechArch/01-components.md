@@ -12,6 +12,7 @@ backend/
 │   ├── documents.py           # /api/documents routes (upload, list, status, delete)
 │   ├── chat.py                # /api/chat routes (query, history, clear, export)
 │   ├── session.py             # /api/session routes (reset)
+│   ├── settings.py            # /api/settings routes (GET, PUT) — F9
 │   └── health.py              # /api/health route
 │
 ├── services/
@@ -41,7 +42,8 @@ backend/
 │
 └── utils/
     ├── session_cookie.py      # Cookie read/write helpers
-    └── retry.py               # Exponential backoff retry decorator
+    ├── retry.py               # Exponential backoff retry decorator
+    └── encryption.py          # Fernet encrypt/decrypt helpers (F9); reads SECRET_KEY env var
 ```
 
 **Component Responsibilities:**
@@ -58,6 +60,8 @@ backend/
 | `chunker.py` | Token-aware text splitting with configurable size/overlap |
 | `retriever.py` | Vector store similarity search with session/document metadata filters |
 | `base.py` (vectorstore) | Abstract interface: `upsert`, `query`, `delete_by_filter`, `delete_collection` |
+| `settings.py` (router) | `GET /api/settings` returns masked key + provider/model; `PUT /api/settings` encrypts and persists key — F9 |
+| `encryption.py` (util) | `encrypt(plaintext) → token` / `decrypt(token) → plaintext` using Fernet; key sourced from `SECRET_KEY` env var — F9 |
 
 ### 2.2 Frontend Components
 
@@ -85,6 +89,9 @@ frontend/src/
 │   │   ├── ChatInput.tsx          # Text area + send button; Enter/Shift+Enter handling
 │   │   └── LoadingIndicator.tsx   # Animated "thinking" dots during LLM generation
 │   │
+│   ├── settings/
+│   │   └── SettingsPanel.tsx      # LLM settings modal: provider, model, API key input — F9
+│   │
 │   └── shared/
 │       ├── ConfirmModal.tsx       # Reusable confirmation dialog (delete, clear, reset)
 │       ├── EmptyState.tsx         # Onboarding / cleared state UI
@@ -95,7 +102,8 @@ frontend/src/
 │   ├── useDocuments.ts        # Document list fetch + polling; delete action
 │   ├── useUpload.ts           # File upload with progress; status tracking
 │   ├── useChat.ts             # Chat history fetch; SSE stream management
-│   └── useSession.ts          # Session init; reset action
+│   ├── useSession.ts          # Session init; reset action
+│   └── useSettings.ts         # LLM settings fetch and update; masked key state — F9
 │
 ├── stores/
 │   └── appStore.ts            # Zustand store: session, documents, messages, uiState
@@ -105,6 +113,7 @@ frontend/src/
 │   ├── documents.ts           # Document API calls (upload, list, status, delete)
 │   ├── chat.ts                # Chat API calls (query SSE, history, clear, export)
 │   ├── session.ts             # Session API calls (reset)
+│   ├── settings.ts            # Settings API calls (GET /api/settings, PUT /api/settings) — F9
 │   └── health.ts              # Health check
 │
 └── types/

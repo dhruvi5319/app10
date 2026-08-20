@@ -63,6 +63,8 @@ Session A                    Session B
 | Rate limiting | `query_in_progress` mutex per session prevents LLM API abuse; global rate limiting delegated to reverse proxy (nginx) in production |
 | Error information leakage | Error responses use `error_code` enum + safe `message`; stack traces never exposed to client |
 | Secrets management | All API keys loaded from environment variables; never hardcoded; `.env` excluded from version control |
+| LLM key at-rest encryption | User-supplied LLM API key (F9) encrypted with Fernet (AES-128-CBC + HMAC-SHA256) before DB storage; raw key never persisted in plaintext; `SECRET_KEY` env var must be set on the server |
+| LLM key API masking | `GET /api/settings` returns key masked as `sk-...XXXX` (last 4 chars only); raw key is never returned in any API response |
 
 ### 5.6 Data Protection
 
@@ -72,6 +74,7 @@ Session A                    Session B
 | Vector embeddings | Session-scoped; deleted on session reset or document deletion |
 | Chat history | In-memory; lost on server restart; no cross-session persistence |
 | API keys | Environment variables only; never logged |
+| LLM API key (user-supplied, F9) | Encrypted with Fernet before storage in `llm_settings` SQLite table; decrypted in-process only; masked (`sk-...XXXX`) in all API responses |
 | PII in documents | No PII extraction; content treated as opaque text for RAG pipeline |
 
 ### 5.7 Security Headers

@@ -178,6 +178,7 @@ backend/
 │   ├── documents.py           # /api/documents routes (upload, list, status, delete)
 │   ├── chat.py                # /api/chat routes (query, history, clear, export)
 │   ├── session.py             # /api/session routes (reset)
+│   ├── settings.py            # /api/settings routes (GET, PUT) — F9
 │   └── health.py              # /api/health route
 │
 ├── services/
@@ -207,7 +208,8 @@ backend/
 │
 └── utils/
     ├── session_cookie.py      # Cookie read/write helpers
-    └── retry.py               # Exponential backoff retry decorator
+    ├── retry.py               # Exponential backoff retry decorator
+    └── encryption.py          # Fernet encrypt/decrypt helpers (F9); reads SECRET_KEY env var
 ```
 
 **Component Responsibilities:**
@@ -224,6 +226,8 @@ backend/
 | `chunker.py` | Token-aware text splitting with configurable size/overlap |
 | `retriever.py` | Vector store similarity search with session/document metadata filters |
 | `base.py` (vectorstore) | Abstract interface: `upsert`, `query`, `delete_by_filter`, `delete_collection` |
+| `settings.py` (router) | `GET /api/settings` returns masked key + provider/model; `PUT /api/settings` encrypts and persists key — F9 |
+| `encryption.py` (util) | `encrypt(plaintext) → token` / `decrypt(token) → plaintext` using Fernet; key sourced from `SECRET_KEY` env var — F9 |
 
 ### 2.2 Frontend Components
 
@@ -251,6 +255,9 @@ frontend/src/
 │   │   ├── ChatInput.tsx          # Text area + send button; Enter/Shift+Enter handling
 │   │   └── LoadingIndicator.tsx   # Animated "thinking" dots during LLM generation
 │   │
+│   ├── settings/
+│   │   └── SettingsPanel.tsx      # LLM settings modal: provider, model, API key input — F9
+│   │
 │   └── shared/
 │       ├── ConfirmModal.tsx       # Reusable confirmation dialog (delete, clear, reset)
 │       ├── EmptyState.tsx         # Onboarding / cleared state UI
@@ -261,7 +268,8 @@ frontend/src/
 │   ├── useDocuments.ts        # Document list fetch + polling; delete action
 │   ├── useUpload.ts           # File upload with progress; status tracking
 │   ├── useChat.ts             # Chat history fetch; SSE stream management
-│   └── useSession.ts          # Session init; reset action
+│   ├── useSession.ts          # Session init; reset action
+│   └── useSettings.ts         # LLM settings fetch and update; masked key state — F9
 │
 ├── stores/
 │   └── appStore.ts            # Zustand store: session, documents, messages, uiState
@@ -271,6 +279,7 @@ frontend/src/
 │   ├── documents.ts           # Document API calls (upload, list, status, delete)
 │   ├── chat.ts                # Chat API calls (query SSE, history, clear, export)
 │   ├── session.ts             # Session API calls (reset)
+│   ├── settings.ts            # Settings API calls (GET /api/settings, PUT /api/settings) — F9
 │   └── health.ts              # Health check
 │
 └── types/
@@ -595,6 +604,39 @@ GROUP BY s.session_id;
 ```
 
 ---
+
+### 3.8 DDL — LLM Settings Table (F9)
+
+```sql
+-- ============================================================
+-- llm_settings
+-- Singleton row (id = 1 enforced by CHECK constraint) storing
+-- the operator-configured LLM provider, model selection, and
+-- Fernet-encrypted API key.  Persisted to SQLite in v1.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS llm_settings (
+    id            INTEGER  PRIMARY KEY CHECK(id = 1),
+    provider      TEXT     NOT NULL DEFAULT 'openai',
+    model         TEXT     NOT NULL DEFAULT 'gpt-4o',
+    encrypted_key TEXT,                    -- NULL until a key is saved
+    updated_at    TEXT     NOT NULL        -- ISO 8601, set on every PUT
+);
+
+-- ============================================================
+-- Design notes:
+--   • id = 1 constraint enforces singleton semantics; use
+--     INSERT OR REPLACE to upsert.
+--   • encrypted_key is a Fernet token (AES-128-CBC + HMAC-SHA256);
+--     decrypted in-process only; never returned to the client.
+--   • GET /api/settings returns the key masked as "sk-...XXXX"
+--     (last 4 chars only) so the UI can indicate a key is set
+--     without exposing the value.
+--   • updated_at is maintained at the application layer on every
+--     PUT /api/settings call.
+-- ============================================================
+```
+
+---
 ## 4. API Design
 
 ### 4.1 API Conventions
@@ -897,6 +939,43 @@ interface APIError {
 | `POST` | `/api/session/reset` | Cookie | — | `200 SessionResetResponse` | Reset everything; new session |
 | `GET` | `/api/health` | None | — | `200\|503 HealthResponse` | Backend health check |
 
+#### Settings API (F9)
+
+| Method | Path | Auth | Request | Response | Description |
+|--------|------|------|---------|----------|-------------|
+| `GET` | `/api/settings` | Cookie | — | `200 LLMSettingsResponse` | Retrieve current LLM settings; key masked |
+| `PUT` | `/api/settings` | Cookie | `LLMSettingsRequest` JSON | `200 LLMSettingsResponse` | Update provider, model, and/or API key |
+
+**PUT /api/settings — Error codes:**
+
+| HTTP | Code | Trigger |
+|------|------|---------|
+| 400 | `INVALID_PROVIDER` | Provider not `openai` or `anthropic` |
+| 400 | `MISSING_SECRET_KEY` | `SECRET_KEY` env var not set on server |
+| 422 | `INVALID_API_KEY_FORMAT` | Key does not start with expected prefix for provider |
+
+**TypeScript interfaces — Settings (F9):**
+
+```typescript
+// ─── LLM Settings (F9) ────────────────────────────────────────────────────
+
+type LLMProvider = 'openai' | 'anthropic';
+
+interface LLMSettingsRequest {
+  provider?: LLMProvider;          // omit to leave unchanged
+  model?:    string;               // omit to leave unchanged
+  api_key?:  string;               // plaintext; omit to leave unchanged
+}
+
+interface LLMSettingsResponse {    // 200 OK
+  provider:    LLMProvider;
+  model:       string;
+  key_set:     boolean;            // true if an encrypted key exists in DB
+  key_preview: string | null;      // "sk-...XXXX" (last 4 chars) or null
+  updated_at:  string;             // ISO 8601
+}
+```
+
 ---
 
 ### 4.5 SSE Stream Protocol Detail
@@ -1003,6 +1082,8 @@ Session A                    Session B
 | Rate limiting | `query_in_progress` mutex per session prevents LLM API abuse; global rate limiting delegated to reverse proxy (nginx) in production |
 | Error information leakage | Error responses use `error_code` enum + safe `message`; stack traces never exposed to client |
 | Secrets management | All API keys loaded from environment variables; never hardcoded; `.env` excluded from version control |
+| LLM key at-rest encryption | User-supplied LLM API key (F9) encrypted with Fernet (AES-128-CBC + HMAC-SHA256) before DB storage; raw key never persisted in plaintext; `SECRET_KEY` env var must be set on the server |
+| LLM key API masking | `GET /api/settings` returns key masked as `sk-...XXXX` (last 4 chars only); raw key is never returned in any API response |
 
 ### 5.6 Data Protection
 
@@ -1012,6 +1093,7 @@ Session A                    Session B
 | Vector embeddings | Session-scoped; deleted on session reset or document deletion |
 | Chat history | In-memory; lost on server restart; no cross-session persistence |
 | API keys | Environment variables only; never logged |
+| LLM API key (user-supplied, F9) | Encrypted with Fernet before storage in `llm_settings` SQLite table; decrypted in-process only; masked (`sk-...XXXX`) in all API responses |
 | PII in documents | No PII extraction; content treated as opaque text for RAG pipeline |
 
 ### 5.7 Security Headers
@@ -1057,6 +1139,7 @@ app.add_middleware(
 | Vector Store (default) | chromadb | 0.5+ | In-process local vector store with metadata filtering |
 | Vector Store (alt) | faiss-cpu | 1.8+ | Local FAISS index with companion metadata JSON |
 | Vector Store (cloud) | pinecone | 4.0+ | Pinecone hosted index with namespace isolation |
+| Encryption | cryptography | 42.0+ | Fernet symmetric encryption for LLM API key at-rest storage |
 | HTTP Client | httpx | 0.27+ | Async HTTP for external API calls |
 | Testing | pytest + pytest-asyncio | 8.x / 0.23+ | Backend unit/integration tests |
 | Test coverage | pytest-cov | 5.x | Coverage reporting (target: > 70% on RAG pipeline) |
@@ -1123,6 +1206,10 @@ SESSION_TTL_HOURS=24
 MAX_DOCUMENTS_PER_SESSION=20
 MAX_FILE_SIZE_BYTES=52428800                 # 50 MB
 MAX_SESSION_SIZE_BYTES=209715200             # 200 MB
+
+# ── LLM Settings (F9) ─────────────────────────────────────────
+SECRET_KEY=<fernet-base64-key>               # Required: 32-byte URL-safe base64 key
+                                              # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
 # ── Server ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS=http://localhost:3000

@@ -300,6 +300,43 @@ interface APIError {
 | `POST` | `/api/session/reset` | Cookie | — | `200 SessionResetResponse` | Reset everything; new session |
 | `GET` | `/api/health` | None | — | `200\|503 HealthResponse` | Backend health check |
 
+#### Settings API (F9)
+
+| Method | Path | Auth | Request | Response | Description |
+|--------|------|------|---------|----------|-------------|
+| `GET` | `/api/settings` | Cookie | — | `200 LLMSettingsResponse` | Retrieve current LLM settings; key masked |
+| `PUT` | `/api/settings` | Cookie | `LLMSettingsRequest` JSON | `200 LLMSettingsResponse` | Update provider, model, and/or API key |
+
+**PUT /api/settings — Error codes:**
+
+| HTTP | Code | Trigger |
+|------|------|---------|
+| 400 | `INVALID_PROVIDER` | Provider not `openai` or `anthropic` |
+| 400 | `MISSING_SECRET_KEY` | `SECRET_KEY` env var not set on server |
+| 422 | `INVALID_API_KEY_FORMAT` | Key does not start with expected prefix for provider |
+
+**TypeScript interfaces — Settings (F9):**
+
+```typescript
+// ─── LLM Settings (F9) ────────────────────────────────────────────────────
+
+type LLMProvider = 'openai' | 'anthropic';
+
+interface LLMSettingsRequest {
+  provider?: LLMProvider;          // omit to leave unchanged
+  model?:    string;               // omit to leave unchanged
+  api_key?:  string;               // plaintext; omit to leave unchanged
+}
+
+interface LLMSettingsResponse {    // 200 OK
+  provider:    LLMProvider;
+  model:       string;
+  key_set:     boolean;            // true if an encrypted key exists in DB
+  key_preview: string | null;      // "sk-...XXXX" (last 4 chars) or null
+  updated_at:  string;             // ISO 8601
+}
+```
+
 ---
 
 ### 4.5 SSE Stream Protocol Detail

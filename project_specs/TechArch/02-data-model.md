@@ -304,3 +304,36 @@ GROUP BY s.session_id;
 ```
 
 ---
+
+### 3.8 DDL — LLM Settings Table (F9)
+
+```sql
+-- ============================================================
+-- llm_settings
+-- Singleton row (id = 1 enforced by CHECK constraint) storing
+-- the operator-configured LLM provider, model selection, and
+-- Fernet-encrypted API key.  Persisted to SQLite in v1.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS llm_settings (
+    id            INTEGER  PRIMARY KEY CHECK(id = 1),
+    provider      TEXT     NOT NULL DEFAULT 'openai',
+    model         TEXT     NOT NULL DEFAULT 'gpt-4o',
+    encrypted_key TEXT,                    -- NULL until a key is saved
+    updated_at    TEXT     NOT NULL        -- ISO 8601, set on every PUT
+);
+
+-- ============================================================
+-- Design notes:
+--   • id = 1 constraint enforces singleton semantics; use
+--     INSERT OR REPLACE to upsert.
+--   • encrypted_key is a Fernet token (AES-128-CBC + HMAC-SHA256);
+--     decrypted in-process only; never returned to the client.
+--   • GET /api/settings returns the key masked as "sk-...XXXX"
+--     (last 4 chars only) so the UI can indicate a key is set
+--     without exposing the value.
+--   • updated_at is maintained at the application layer on every
+--     PUT /api/settings call.
+-- ============================================================
+```
+
+---
