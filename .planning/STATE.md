@@ -47,6 +47,7 @@
 
 ### Roadmap Evolution
 - Phase 4 added: Modern and aesthetic UI redesign
+- Phase 5 added: Add LLM settings panel with encrypted API key configuration
 
 ## Last Session
 - **Stopped At:** Completed Phase 01 — all 12 tasks done (T12 commit: f99021a)

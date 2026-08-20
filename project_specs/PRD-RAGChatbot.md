@@ -205,6 +205,32 @@ Key pain points:
 
 ---
 
+### F9: LLM Settings Panel
+
+**Description:** A user-facing settings panel lets users configure their LLM provider, model name, and API key directly through the UI — no `.env` file or server restart required. The API key is encrypted at rest using Fernet symmetric encryption and is never revealed after it has been saved; the GET endpoint returns a masked representation (e.g. `sk-...XXXX`). Settings persist in a dedicated `llm_settings` database table and are applied to all subsequent chat queries in the session.
+
+**Capabilities:**
+
+*Backend:*
+- New `llm_settings` SQLite table storing provider, model name, and Fernet-encrypted API key
+- `cryptography` library dependency for Fernet symmetric encryption/decryption
+- Encryption utility module (`encrypt_api_key` / `decrypt_api_key`) with server-side key derived from environment
+- `POST /api/settings` — accepts provider, model, and raw API key; encrypts key before writing to DB; returns 204
+- `GET /api/settings` — returns current provider and model name, plus masked API key (all characters replaced except last 4, prefixed with provider hint, e.g. `sk-...XXXX`); raw key is never returned
+- Settings applied at query time: decrypted key injected into LLM client before each chat call, overriding any `.env` value when a saved key is present
+
+*Frontend:*
+- Gear icon button in the app header or toolbar that opens a settings modal/drawer
+- Settings modal contains: LLM provider select (e.g. OpenAI, Anthropic), model name text input, and API key input field
+- API key field always renders the masked value on load; clearing and re-typing replaces the stored key on save
+- Save and Cancel buttons; Save triggers `POST /api/settings` and closes the modal on success
+- Inline validation: provider and model are required; API key field accepts any non-empty string (format validation deferred to server)
+- Success toast on save; error toast with message on failure
+
+**Priority:** P1 (High — enables end-to-end use without server-side `.env` configuration; required for Phase 5 delivery)
+
+---
+
 ## 6. Non-Functional Requirements
 
 | Category | Requirement | Target |
@@ -219,6 +245,7 @@ Key pain points:
 | **Accessibility** | Frontend compliance | WCAG 2.1 AA minimum |
 | **Browser Support** | Frontend compatibility | Latest 2 versions of Chrome, Firefox, Safari, Edge |
 | **Maintainability** | Backend code coverage | > 70% unit test coverage on RAG pipeline |
+| **Security** | API key storage | Keys encrypted at rest (Fernet); raw key never returned by any API endpoint; masked on read (`sk-...XXXX`) |
 
 ---
 
@@ -269,11 +296,12 @@ Key pain points:
 | F6 | Multi-Document Context Retrieval | P2 | Core Pipeline | 🔄 Post-MVP |
 | F7 | Answer Confidence & Relevance Feedback | P2 | Trust & Transparency | 🔄 Post-MVP |
 | F8 | Export & Copy Utilities | P3 | Convenience | 🔄 Post-MVP |
+| F9 | LLM Settings Panel | P1 | Configuration & Security | 🔄 Phase 5 |
 
 ### Priority Summary
 
 - **P0 (Critical — MVP blockers):** F0, F1, F2 — the RAG pipeline core
-- **P1 (High — MVP completers):** F3, F4, F5 — usability and session management
+- **P1 (High — MVP completers):** F3, F4, F5 — usability and session management; F9 — LLM settings panel (Phase 5)
 - **P2 (Medium — v1.1 targets):** F6, F7 — quality and multi-document enhancements
 - **P3 (Low — backlog):** F8 — convenience utilities
 

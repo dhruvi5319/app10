@@ -309,6 +309,16 @@ The following NFRs from PRD §7 are addressed across phases:
 Plans:
 - [ ] TBD (run /pivota_spec:plan-phase 4 to break down)
 
+### Phase 5: Add LLM settings panel with encrypted API key configuration
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /pivota_spec:plan-phase 5 to break down)
+
 ---
 
 *Document generated: 2026-05-13*
